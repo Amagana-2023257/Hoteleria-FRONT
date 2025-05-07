@@ -1,0 +1,25 @@
+/* auth.css */
+
+/* Card wrapper */
+.auth-wrapper {
+    background: #f8f9fa; /* bootstrap light */
+  }
+  
+  .auth-card {
+    border: none;
+    border-radius: 0.5rem;
+    max-width: 480px;
+    width: 100%;
+  }
+  
+  /* Override Bootstrap link button */
+  .auth-card .btn-link {
+    color: #dc3545;
+    font-weight: 600;
+  }
+  
+  .auth-card .btn-link:hover {
+    text-decoration: none;
+    color: #a71d2a;
+  }
+  
