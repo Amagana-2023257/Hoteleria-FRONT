@@ -1,90 +1,114 @@
-// src/components/rooms/crud/CreateRoom.jsx
-import React, { useState } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import { useCreateRoom } from '../../shared/hooks/useCreateRoom';
+import { useGetHotels } from '../../shared/hooks/useGetHotels';
 import { Input } from '../UI/Input';
 
+const initialFormState = {
+  hotel:    { value: '', isValid: false, showError: false },
+  type:     { value: '', isValid: false, showError: false },
+  capacity: { value: '', isValid: false, showError: false },
+  price:    { value: '', isValid: false, showError: false },
+};
+
 export const CreateRoom = ({ onCreated }) => {
-  const { createRoom, isLoading } = useCreateRoom();
-  const [form, setForm] = useState({
-    hotel:       { value: '', isValid: false, showError: false },
-    number:      { value: '', isValid: false, showError: false },
-    type:        { value: '', isValid: false, showError: false },
-    price:       { value: '', isValid: false, showError: false },
-  });
+  const { createRoom, isLoading, error } = useCreateRoom();
+  const { hotels, isLoading: loadingHotels, error: hotelsError } = useGetHotels();
+  const [form, setForm] = useState(initialFormState);
 
-  const handleChange = (val, field) => {
-    setForm(f => ({
-      ...f,
-      [field]: { ...f[field], value: val }
-    }));
-  };
-
-  const handleBlur = (val, field) => {
-    let isValid = val.trim() !== '';
-    if (field === 'price') {
-      const num = Number(val);
-      isValid = !isNaN(num) && num > 0;
+  // When hotels load, mark hotel valid if default selection
+  useEffect(() => {
+    if (hotels.length && !form.hotel.value) {
+      setForm(prev => ({
+        ...prev,
+        hotel: { ...prev.hotel, isValid: false }
+      }));
     }
-    setForm(f => ({
-      ...f,
-      [field]: { ...f[field], isValid, showError: !isValid }
-    }));
+  }, [hotels]);
+
+  const validateField = (value, field) => {
+    if (field === 'capacity' || field === 'price') {
+      const num = Number(value);
+      return Number.isFinite(num) && num > 0;
+    }
+    return value.trim() !== '';
   };
 
-  const handleSubmit = async e => {
+  const handleChange = useCallback((value, field) => {
+    const valid = validateField(value, field);
+    setForm(prev => ({
+      ...prev,
+      [field]: { value, isValid: valid, showError: false }
+    }));
+  }, []);
+
+  const handleBlur = useCallback((value, field) => {
+    const valid = validateField(value, field);
+    setForm(prev => ({
+      ...prev,
+      [field]: { ...prev[field], isValid: valid, showError: !valid }
+    }));
+  }, []);
+
+  const handleSubmit = useCallback(async e => {
     e.preventDefault();
-    const data = {
-      hotel:  form.hotel.value,
-      number: form.number.value,
-      type:   form.type.value,
-      price:  Number(form.price.value),
-    };
-    const result = await createRoom(data);
-    if (result.success && onCreated) {
-      onCreated(result.data.room);
-      setForm({
-        hotel:  { value: '', isValid: false, showError: false },
-        number: { value: '', isValid: false, showError: false },
-        type:   { value: '', isValid: false, showError: false },
-        price:  { value: '', isValid: false, showError: false },
-      });
+    const isFormValid = Object.values(form).every(f => f.isValid);
+    if (!isFormValid) {
+      setForm(prev =>
+        Object.fromEntries(
+          Object.entries(prev).map(([key, field]) => [
+            key,
+            { ...field, showError: !field.isValid }
+          ])
+        )
+      );
+      return;
     }
-  };
 
-  const disabled =
-    isLoading ||
-    !form.hotel.isValid ||
-    !form.number.isValid ||
-    !form.type.isValid ||
-    !form.price.isValid;
+    const payload = {
+      hotel: form.hotel.value,
+      type: form.type.value,
+      capacity: Number(form.capacity.value),
+      price: Number(form.price.value),
+    };
+
+    const result = await createRoom(payload);
+    if (result.success) {
+      onCreated?.(result.data.room);
+      setForm(initialFormState);
+    }
+  }, [form, createRoom, onCreated]);
+
+  const isFormValid = Object.values(form).every(f => f.isValid);
 
   return (
     <form onSubmit={handleSubmit} className="p-3 border rounded">
       <h5 className="mb-3">Crear Habitación</h5>
 
-      <Input
-        field="hotel"
-        label="ID de Hotel"
-        type="text"
-        value={form.hotel.value}
-        onChangeHandler={handleChange}
-        onBlurHandler={handleBlur}
-        showErrorMessage={form.hotel.showError}
-        validationMessage="El ID de hotel es requerido."
-      />
+      {/* Global Errors */}
+      {error && <div className="alert alert-danger">{error}</div>}
+      {hotelsError && <div className="alert alert-danger">Error cargando hoteles</div>}
 
-      <Input
-        field="number"
-        label="Número de Habitación"
-        type="text"
-        value={form.number.value}
-        onChangeHandler={handleChange}
-        onBlurHandler={handleBlur}
-        showErrorMessage={form.number.showError}
-        validationMessage="El número es requerido."
-      />
+      {/* Hotel Selector */}
+      <div className="mb-3">
+        <label htmlFor="hotel" className="form-label">Hotel</label>
+        <select
+          id="hotel"
+          className={`form-select ${form.hotel.showError ? 'is-invalid' : ''}`}
+          value={form.hotel.value}
+          onChange={e => handleChange(e.target.value, 'hotel')}
+          onBlur={e => handleBlur(e.target.value, 'hotel')}
+          disabled={loadingHotels || !!hotelsError || isLoading}
+        >
+          <option value="">Seleccione un hotel</option>
+          {hotels.map(h => (
+            <option key={h._id} value={h._id}>{h.name}</option>
+          ))}
+        </select>
+        {form.hotel.showError && <div className="invalid-feedback">El hotel es requerido.</div>}
+      </div>
 
+      {/* Type */}
       <Input
         field="type"
         label="Tipo de Habitación"
@@ -93,9 +117,24 @@ export const CreateRoom = ({ onCreated }) => {
         onChangeHandler={handleChange}
         onBlurHandler={handleBlur}
         showErrorMessage={form.type.showError}
-        validationMessage="El tipo es requerido."
+        validationMessage="El tipo de habitación es requerido."
+        disabled={isLoading}
       />
 
+      {/* Capacity */}
+      <Input
+        field="capacity"
+        label="Capacidad de Huéspedes"
+        type="number"
+        value={form.capacity.value}
+        onChangeHandler={handleChange}
+        onBlurHandler={handleBlur}
+        showErrorMessage={form.capacity.showError}
+        validationMessage="La capacidad debe ser un número mayor que 0."
+        disabled={isLoading}
+      />
+
+      {/* Price */}
       <Input
         field="price"
         label="Precio"
@@ -105,10 +144,11 @@ export const CreateRoom = ({ onCreated }) => {
         onBlurHandler={handleBlur}
         showErrorMessage={form.price.showError}
         validationMessage="El precio debe ser un número mayor que 0."
+        disabled={isLoading}
       />
 
       <div className="d-grid mt-3">
-        <button type="submit" className="btn btn-primary" disabled={disabled}>
+        <button type="submit" className="btn btn-primary" disabled={isLoading || !isFormValid}>
           {isLoading ? 'Creando...' : 'Crear Habitación'}
         </button>
       </div>

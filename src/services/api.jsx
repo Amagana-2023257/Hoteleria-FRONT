@@ -134,6 +134,14 @@ export const deleteRoom = async id => {
   }
 };
 
+export const getRoomsByHotel = async hotelId => {
+  try {
+    return await apiClient.get(`/room/getRoomsByHotel/${hotelId}`);
+  } catch (e) {
+    return handleError(e);
+  }
+};
+
 // ── Events ─────────────────────────────────────────────────────────────────────
 export const createEvent = async data => {
   try {

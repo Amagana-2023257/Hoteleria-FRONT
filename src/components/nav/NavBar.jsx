@@ -11,13 +11,13 @@ export const Navbar = () => {
       <div className="container-fluid">
         <Link className="navbar-brand d-flex align-items-center" to="/dashboard">
           <img
-            src="./../../assets/logo.png"
+            src="../../src/assets/logo.png"
             alt="Logo"
             width="40"
             height="40"
             className="me-2"
           />
-          <span className="fw-bold text-dark">Almacenadora</span>
+          <span className="fw-bold text-dark">Hostel</span>
         </Link>
 
         <button

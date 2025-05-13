@@ -1,4 +1,3 @@
-// src/components/rooms/crud/ListRooms.jsx
 import React from 'react';
 import { useGetRooms } from '../../shared/hooks/useGetRooms';
 
@@ -20,7 +19,7 @@ export const ListRooms = () => {
 
       {error && (
         <div className="alert alert-danger">
-          Error al cargar habitaciones: {error.message || 'Intenta de nuevo.'}
+          Error al cargar habitaciones: {typeof error === 'string' ? error : error.message || 'Intenta de nuevo.'}
         </div>
       )}
 
@@ -33,8 +32,8 @@ export const ListRooms = () => {
           {rooms.map(room => (
             <li key={room._id} className="list-group-item">
               <div><strong>ID:</strong> {room._id}</div>
-              <div><strong>Hotel:</strong> {room.hotel}</div>
-              <div><strong>Número:</strong> {room.number}</div>
+              <div><strong>Hotel:</strong> {room.hotel?.name || '—'}</div>
+              <div><strong>Capacidad:</strong> {room.capacity}</div>
               <div><strong>Tipo:</strong> {room.type}</div>
               <div><strong>Precio:</strong> Q{room.price}</div>
             </li>
