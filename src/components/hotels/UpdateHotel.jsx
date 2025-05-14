@@ -1,11 +1,14 @@
 // src/components/hotels/crud/UpdateHotel.jsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import { useUpdateHotel } from '../../shared/hooks/useUpdateHotel';
+import { useGetHotels } from '../../shared/hooks/useGetHotels';
 import { Input } from '../UI/Input';
 
 export const UpdateHotel = ({ onUpdated }) => {
   const { updateHotel, isLoading } = useUpdateHotel();
+  const { hotels, isLoading: loadingHotels } = useGetHotels();
+
   const [form, setForm] = useState({
     id:         { value: '', isValid: false, showError: false },
     name:       { value: '', isValid: false, showError: false },
@@ -61,6 +64,21 @@ export const UpdateHotel = ({ onUpdated }) => {
     }
   };
 
+  const handleHotelSelect = (e) => {
+    const selectedId = e.target.value;
+    const selectedHotel = hotels.find(h => h._id === selectedId);
+    if (selectedHotel) {
+      setForm({
+        id:         { value: selectedHotel._id, isValid: true, showError: false },
+        name:       { value: selectedHotel.name, isValid: true, showError: false },
+        address:    { value: selectedHotel.address, isValid: true, showError: false },
+        category:   { value: selectedHotel.category, isValid: true, showError: false },
+        price:      { value: selectedHotel.price.toString(), isValid: true, showError: false },
+        amenities:  { value: selectedHotel.amenities.join(', '), isValid: true, showError: false },
+      });
+    }
+  };
+
   const disabled =
     isLoading ||
     !form.id.isValid ||
@@ -70,8 +88,27 @@ export const UpdateHotel = ({ onUpdated }) => {
     !form.price.isValid;
 
   return (
-    <form onSubmit={handleSubmit} className="p-3 border rounded">
-      <h5 className="mb-3">Actualizar Hotel</h5>
+    <form onSubmit={handleSubmit} className="p-4 border rounded bg-white shadow">
+      <h5 className="mb-3 font-semibold">Actualizar Hotel</h5>
+
+      {/* ComboBox para seleccionar hotel */}
+      <div className="mb-3">
+        <label htmlFor="selectHotel" className="form-label">Selecciona un hotel</label>
+        <select
+          id="selectHotel"
+          className="form-select"
+          onChange={handleHotelSelect}
+          disabled={loadingHotels}
+          value={form.id.value}
+        >
+          <option value="">-- Selecciona un hotel --</option>
+          {hotels.map(h => (
+            <option key={h._id} value={h._id}>
+              {h.name}
+            </option>
+          ))}
+        </select>
+      </div>
 
       <Input
         field="id"

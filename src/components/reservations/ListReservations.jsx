@@ -6,11 +6,11 @@ export const ListReservations = () => {
   const { reservations, isLoading, error, fetchReservations } = useGetReservations();
 
   return (
-    <div className="p-3 border rounded">
-      <div className="d-flex justify-content-between align-items-center mb-3">
-        <h5>Lista de Reservaciones</h5>
+    <div className="p-4 border rounded-lg bg-white shadow">
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-lg font-semibold">Lista de Reservaciones</h2>
         <button
-          className="btn btn-outline-secondary btn-sm"
+          className="px-3 py-1 border border-gray-400 text-sm rounded hover:bg-gray-100"
           onClick={fetchReservations}
           disabled={isLoading}
         >
@@ -19,23 +19,23 @@ export const ListReservations = () => {
       </div>
 
       {error && (
-        <div className="alert alert-danger">
+        <div className="text-red-600 mb-3">
           Error al cargar reservaciones: {error.message || 'Intenta de nuevo.'}
         </div>
       )}
 
       {!isLoading && reservations.length === 0 && (
-        <div className="text-muted">No hay reservaciones disponibles.</div>
+        <div className="text-gray-500">No hay reservaciones disponibles.</div>
       )}
 
       {reservations.length > 0 && (
-        <ul className="list-group">
+        <ul className="space-y-4">
           {reservations.map(res => (
-            <li key={res._id} className="list-group-item">
+            <li key={res._id} className="p-4 border rounded shadow-sm bg-gray-50">
               <div><strong>ID:</strong> {res._id}</div>
-              <div><strong>Usuario:</strong> {res.user}</div>
-              <div><strong>Hotel:</strong> {res.hotel}</div>
-              <div><strong>Habitación:</strong> {res.room}</div>
+              <div><strong>Usuario:</strong> {res.user?.name} {res.user?.surname} ({res.user?.email})</div>
+              <div><strong>Hotel:</strong> {res.hotel?.name}</div>
+              <div><strong>Habitación:</strong> {res.room?.number}</div>
               <div><strong>Entrada:</strong> {new Date(res.checkInDate).toLocaleDateString()}</div>
               <div><strong>Salida:</strong> {new Date(res.checkOutDate).toLocaleDateString()}</div>
               <div><strong>Estado:</strong> {res.status}</div>

@@ -10,5 +10,5 @@ export const routes = [
   {
     path: '/*',
     element: <AuthPage />,
-  },
+  }
 ];
