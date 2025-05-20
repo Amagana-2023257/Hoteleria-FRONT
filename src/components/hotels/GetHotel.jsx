@@ -2,107 +2,99 @@
 import React, { useState } from 'react';
 import { useGetHotel } from '../../shared/hooks/useGetHotel';
 import { useGetHotels } from '../../shared/hooks/useGetHotels';
-import { Input } from '../UI/Input';
+import { motion } from 'framer-motion';
+import { FaSearch } from 'react-icons/fa';
 
-export const GetHotel = () => {
-  const [hotelId, setHotelId] = useState({ value: '', isValid: false, showError: false });
+const GetHotel = () => {
+  const [hotelId, setHotelId] = useState('');
+  const [errorId, setErrorId] = useState(false);
 
-  // Hook para obtener 1 hotel por ID
-  const { hotel, isLoading: loadingHotel, error, fetchHotel } = useGetHotel(hotelId.value);
-
-  // Hook para listar todos los hoteles (para combo box)
   const { hotels, isLoading: loadingHotels } = useGetHotels();
+  const { hotel, isLoading: loadingHotel, error: fetchError, fetchHotel } = useGetHotel(hotelId);
 
-  const handleChange = (val) => {
-    setHotelId({
-      value: val,
-      isValid: val.trim() !== '',
-      showError: false,
-    });
+  const handleChange = e => {
+    setHotelId(e.target.value);
+    if (e.target.value.trim()) setErrorId(false);
   };
-
-  const handleBlur = () => {
-    if (!hotelId.value.trim()) {
-      setHotelId((id) => ({ ...id, isValid: false, showError: true }));
-    }
-  };
-
-  const handleFetch = (e) => {
+  const handleSearch = e => {
     e.preventDefault();
-    if (hotelId.isValid) {
-      fetchHotel();
-    } else {
-      setHotelId((id) => ({ ...id, showError: true }));
+    if (!hotelId.trim()) {
+      setErrorId(true);
+      return;
     }
-  };
-
-  const handleSelectChange = (e) => {
-    const selectedId = e.target.value;
-    if (selectedId) {
-      handleChange(selectedId); // actualiza el estado y valida
-    }
+    fetchHotel();
   };
 
   return (
-    <div className="p-4 border rounded bg-white shadow">
-      <h5 className="mb-4 font-semibold">Obtener Hotel</h5>
+    <motion.div initial={{ opacity:0,y:20 }} animate={{ opacity:1,y:0 }} transition={{ duration:0.4 }}
+                className="container mt-4">
+      <div className="card shadow-sm">
+        <div className="card-body">
+          <h5 className="card-title mb-4">Buscar Hotel por ID</h5>
+          <form onSubmit={handleSearch} className="row g-3 align-items-end">
+            <div className="col-md-6">
+              <label htmlFor="hotelId" className="form-label">ID de Hotel</label>
+              <div className="input-group">
+                <span className="input-group-text bg-white border-end-0"><FaSearch/></span>
+                <input id="hotelId" type="text"
+                       className={`form-control border-start-0 ${errorId?'is-invalid':''}`}
+                       placeholder="Ingresa ID" value={hotelId} onChange={handleChange}/>
+                <div className="invalid-feedback">El ID de hotel es requerido.</div>
+              </div>
+            </div>
 
-      <form onSubmit={handleFetch}>
-        <div className="mb-4">
-          <label className="block mb-1 text-sm font-medium">Buscar por ID</label>
-          <Input
-            field="hotelId"
-            label="ID de Hotel"
-            type="text"
-            value={hotelId.value}
-            onChangeHandler={handleChange}
-            onBlurHandler={handleBlur}
-            showErrorMessage={hotelId.showError}
-            validationMessage="El ID de hotel es requerido."
-          />
+            <div className="col-md-6">
+              <label htmlFor="selectHotel" className="form-label">O seleccionar un hotel</label>
+              <select id="selectHotel" className="form-select"
+                      value={hotelId} onChange={handleChange} disabled={loadingHotels}>
+                <option value="">-- Selecciona --</option>
+                {hotels.map(h => <option key={h._id} value={h._id}>{h.name}</option>)}
+              </select>
+            </div>
+
+            <div className="col-12 text-end">
+              <button type="submit" className="btn btn-primary" disabled={loadingHotel}>
+                {loadingHotel ? 'Buscando...' : 'Buscar'}
+              </button>
+            </div>
+          </form>
+
+          {fetchError && (
+            <motion.div className="alert alert-danger mt-3" initial={{ opacity:0 }} animate={{ opacity:1 }}>
+              Error al buscar hotel: {fetchError.message || 'Intenta de nuevo.'}
+            </motion.div>
+          )}
+
+          {hotel && (
+            <motion.div className="mt-4" initial={{ opacity:0 }} animate={{ opacity:1 }}>
+              <h6 className="mb-3">Detalles del Hotel</h6>
+              <img src={`${import.meta.env.VITE_API_URL}${hotel.images[0]}`} alt={hotel.name}
+                   className="img-fluid rounded mb-3" style={{ maxHeight: '200px', objectFit: 'cover' }}/>
+              <ul className="list-group">
+                {['ID','Nombre','Ubicación','Dirección','Categoría','Precio','Amenidades','Calificación','Disponibles']
+                  .map((field, i) => (
+                  <li key={i} className="list-group-item">
+                    <strong>{field}:</strong>{' '}
+                    {{
+                      ID: hotel._id,
+                      Nombre: hotel.name,
+                      Ubicación: hotel.location,
+                      Dirección: hotel.address,
+                      Categoría: hotel.category,
+                      Precio: `Q${hotel.price} por noche`,
+                      Amenidades: hotel.amenities.join(', '),
+                      Calificación: `${hotel.rating} / 5`,
+                      Disponibles: hotel.availableRooms
+                    }[field]}
+                  </li>
+                ))}
+              </ul>
+            </motion.div>
+          )}
         </div>
-
-        <div className="mb-4">
-          <label className="block mb-1 text-sm font-medium">O seleccionar un hotel</label>
-          <select
-            className="w-full p-2 border rounded"
-            onChange={handleSelectChange}
-            disabled={loadingHotels}
-            value={hotelId.value}
-          >
-            <option value="">-- Selecciona un hotel --</option>
-            {hotels.map((h) => (
-              <option key={h._id} value={h._id}>
-                {h.name}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <button className="btn btn-secondary w-full" type="submit" disabled={loadingHotel}>
-          {loadingHotel ? 'Cargando...' : 'Cargar Hotel'}
-        </button>
-      </form>
-
-      {error && (
-        <div className="mt-3 text-red-600">
-          Error al cargar el hotel: {error.message || 'Revisa el ID e inténtalo de nuevo.'}
-        </div>
-      )}
-
-      {hotel && (
-        <div className="mt-5">
-          <h6 className="font-semibold mb-2">Detalles del Hotel:</h6>
-          <ul className="list-disc list-inside space-y-1">
-            <li><strong>ID:</strong> {hotel.uid}</li>
-            <li><strong>Nombre:</strong> {hotel.name}</li>
-            <li><strong>Dirección:</strong> {hotel.address}</li>
-            <li><strong>Categoría:</strong> {hotel.category}</li>
-            <li><strong>Precio:</strong> Q{hotel.price}</li>
-            <li><strong>Servicios:</strong> {hotel.amenities.join(', ')}</li>
-          </ul>
-        </div>
-      )}
-    </div>
+      </div>
+    </motion.div>
   );
 };
+
+export default GetHotel;

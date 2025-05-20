@@ -1,203 +1,128 @@
 // src/components/hotels/crud/UpdateHotel.jsx
 import React, { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
-import { useUpdateHotel } from '../../shared/hooks/useUpdateHotel';
+import { motion } from 'framer-motion';
+import { FaSyncAlt } from 'react-icons/fa';
 import { useGetHotels } from '../../shared/hooks/useGetHotels';
-import { Input } from '../UI/Input';
+import { useUpdateHotel } from '../../shared/hooks/useUpdateHotel';
 
 export const UpdateHotel = ({ onUpdated }) => {
-  const { updateHotel, isLoading } = useUpdateHotel();
   const { hotels, isLoading: loadingHotels } = useGetHotels();
+  const { updateHotel, isLoading: updating } = useUpdateHotel();
 
+  const [selected, setSelected] = useState(null);
   const [form, setForm] = useState({
-    id:         { value: '', isValid: false, showError: false },
-    name:       { value: '', isValid: false, showError: false },
-    address:    { value: '', isValid: false, showError: false },
-    category:   { value: '', isValid: false, showError: false },
-    price:      { value: '', isValid: false, showError: false },
-    amenities:  { value: '', isValid: false, showError: false },
+    name:'', location:'', address:'', category:'', price:'',
+    amenities:'', rating:'', availableRooms:''
   });
+  const [errors, setErrors] = useState({});
 
-  const handleChange = (val, field) => {
-    setForm(f => ({
-      ...f,
-      [field]: { ...f[field], value: val }
-    }));
-  };
-
-  const handleBlur = (val, field) => {
-    let isValid = val.trim() !== '';
-    if (field === 'price') {
-      const num = Number(val);
-      isValid = !isNaN(num) && num > 0;
+  useEffect(() => {
+    if (selected) {
+      setForm({
+        name: selected.name,
+        location: selected.location,
+        address: selected.address,
+        category: selected.category,
+        price: String(selected.price),
+        amenities: selected.amenities.join(', '),
+        rating: String(selected.rating),
+        availableRooms: String(selected.availableRooms)
+      });
+      setErrors({});
     }
-    setForm(f => ({
-      ...f,
-      [field]: { ...f[field], isValid, showError: !isValid }
-    }));
+  }, [selected]);
+
+  const onSelect = e => setSelected(hotels.find(h=>h._id===e.target.value)||null);
+  const onChange = e => { setForm(f=>({...f,[e.target.name]:e.target.value})); setErrors({}); };
+
+  const validate = () => {
+    const errs = {};
+    if (!form.name) errs.name='Requerido';
+    if (!form.location) errs.location='Requerido';
+    if (!form.address) errs.address='Requerido';
+    if (!form.category) errs.category='Requerido';
+    if (!form.price||Number(form.price)<=0) errs.price='>0';
+    if (form.rating&&(isNaN(Number(form.rating))||Number(form.rating)<0||Number(form.rating)>5))
+      errs.rating='0–5';
+    if (!form.availableRooms||Number(form.availableRooms)<0) errs.availableRooms='≥0';
+    return errs;
   };
 
-  const handleSubmit = async e => {
+  const onSubmit=async e=>{
     e.preventDefault();
-    const amenitiesArray = form.amenities.value
-      .split(',')
-      .map(a => a.trim())
-      .filter(a => a);
-    const payload = {
-      name:       form.name.value,
-      address:    form.address.value,
-      category:   form.category.value,
-      price:      Number(form.price.value),
-      amenities:  amenitiesArray,
+    const errs=validate();
+    if(Object.keys(errs).length){setErrors(errs);return;}
+    const payload={
+      name:form.name,location:form.location,address:form.address,
+      category:form.category,price:Number(form.price),
+      amenities:form.amenities.split(',').map(a=>a.trim()).filter(Boolean),
+      rating:Number(form.rating),availableRooms:Number(form.availableRooms)
     };
-    const result = await updateHotel(form.id.value, payload);
-    if (result.success && onUpdated) {
-      onUpdated(result.data.hotel);
-      setForm({
-        id:         { value: '', isValid: false, showError: false },
-        name:       { value: '', isValid: false, showError: false },
-        address:    { value: '', isValid: false, showError: false },
-        category:   { value: '', isValid: false, showError: false },
-        price:      { value: '', isValid: false, showError: false },
-        amenities:  { value: '', isValid: false, showError: false },
-      });
-    }
+    const res=await updateHotel(selected._id,payload);
+    if(res.success){onUpdated?.(res.data.hotel);setSelected(null);}
   };
-
-  const handleHotelSelect = (e) => {
-    const selectedId = e.target.value;
-    const selectedHotel = hotels.find(h => h._id === selectedId);
-    if (selectedHotel) {
-      setForm({
-        id:         { value: selectedHotel._id, isValid: true, showError: false },
-        name:       { value: selectedHotel.name, isValid: true, showError: false },
-        address:    { value: selectedHotel.address, isValid: true, showError: false },
-        category:   { value: selectedHotel.category, isValid: true, showError: false },
-        price:      { value: selectedHotel.price.toString(), isValid: true, showError: false },
-        amenities:  { value: selectedHotel.amenities.join(', '), isValid: true, showError: false },
-      });
-    }
-  };
-
-  const disabled =
-    isLoading ||
-    !form.id.isValid ||
-    !form.name.isValid ||
-    !form.address.isValid ||
-    !form.category.isValid ||
-    !form.price.isValid;
 
   return (
-    <form onSubmit={handleSubmit} className="p-4 border rounded bg-white shadow">
-      <h5 className="mb-3 font-semibold">Actualizar Hotel</h5>
+    <motion.div initial={{opacity:0,y:20}} animate={{opacity:1,y:0}} transition={{duration:0.4}}
+                className="container mt-4">
+      <div className="card shadow-sm">
+        <div className="card-body">
+          <h5 className="card-title mb-4">Actualizar Hotel</h5>
 
-      {/* ComboBox para seleccionar hotel */}
-      <div className="mb-3">
-        <label htmlFor="selectHotel" className="form-label">Selecciona un hotel</label>
-        <select
-          id="selectHotel"
-          className="form-select"
-          onChange={handleHotelSelect}
-          disabled={loadingHotels}
-          value={form.id.value}
-        >
-          <option value="">-- Selecciona un hotel --</option>
-          {hotels.map(h => (
-            <option key={h._id} value={h._id}>
-              {h.name}
-            </option>
-          ))}
-        </select>
+          <div className="mb-3">
+            <label htmlFor="hotelSelect" className="form-label">Selecciona un Hotel</label>
+            <div className="input-group">
+              <select id="hotelSelect" className="form-select"
+                      value={selected?._id||''} onChange={onSelect} disabled={loadingHotels}>
+                <option value="">-- Selecciona --</option>
+                {hotels.map(h=>(
+                  <option key={h._id} value={h._id}>{h.name}</option>
+                ))}
+              </select>
+              <button type="button" className="btn btn-outline-secondary" onClick={()=>setSelected(null)}>
+                <FaSyncAlt/>
+              </button>
+            </div>
+          </div>
+
+          {selected && (
+            <form onSubmit={onSubmit} className="row g-3">
+              {['name','location','address','category'].map(n=>(
+                <div className="col-md-6" key={n}>
+                  <label htmlFor={n} className="form-label">{n.charAt(0).toUpperCase()+n.slice(1)}</label>
+                  <input id={n} name={n} type="text"
+                         className={`form-control ${errors[n]?'is-invalid':''}`}
+                         value={form[n]} onChange={onChange}/>
+                  {errors[n]&&<div className="invalid-feedback">{errors[n]}</div>}
+                </div>
+              ))}
+              {[['price','number'],['rating','number'],['availableRooms','number']].map(([n,t])=>(
+                <div className="col-md-4" key={n}>
+                  <label htmlFor={n} className="form-label">{n.charAt(0).toUpperCase()+n.slice(1)}</label>
+                  <input id={n} name={n} type={t}
+                         className={`form-control ${errors[n]?'is-invalid':''}`}
+                         value={form[n]} onChange={onChange}/>
+                  {errors[n]&&<div className="invalid-feedback">{errors[n]}</div>}
+                </div>
+              ))}
+              <div className="col-12">
+                <label htmlFor="amenities" className="form-label">Amenidades (coma separadas)</label>
+                <input id="amenities" name="amenities" type="text"
+                       className="form-control" value={form.amenities} onChange={onChange}/>
+              </div>
+              <div className="col-12 text-end">
+                <button type="submit" className="btn btn-warning" disabled={updating}>
+                  {updating?'Actualizando...':'Actualizar'}
+                </button>
+              </div>
+            </form>
+          )}
+        </div>
       </div>
-
-      <Input
-        field="id"
-        label="ID de Hotel"
-        type="text"
-        value={form.id.value}
-        onChangeHandler={handleChange}
-        onBlurHandler={handleBlur}
-        showErrorMessage={form.id.showError}
-        validationMessage="El ID de hotel es requerido."
-      />
-
-      <Input
-        field="name"
-        label="Nombre"
-        type="text"
-        value={form.name.value}
-        onChangeHandler={handleChange}
-        onBlurHandler={handleBlur}
-        showErrorMessage={form.name.showError}
-        validationMessage="El nombre es requerido."
-      />
-
-      <Input
-        field="address"
-        label="Dirección"
-        type="text"
-        value={form.address.value}
-        onChangeHandler={handleChange}
-        onBlurHandler={handleBlur}
-        showErrorMessage={form.address.showError}
-        validationMessage="La dirección es requerida."
-      />
-
-      <div className="mb-3">
-        <label htmlFor="category" className="form-label">Categoría</label>
-        <select
-          id="category"
-          name="category"
-          className={`form-select ${form.category.showError ? 'is-invalid' : ''}`}
-          value={form.category.value}
-          onChange={e => handleChange(e.target.value, 'category')}
-          onBlur={e => handleBlur(e.target.value, 'category')}
-        >
-          <option value="">Selecciona categoría</option>
-          <option value="Luxury">Luxury</option>
-          <option value="Standard">Standard</option>
-          <option value="Economy">Economy</option>
-        </select>
-        {form.category.showError && (
-          <div className="invalid-feedback">La categoría es requerida.</div>
-        )}
-      </div>
-
-      <Input
-        field="price"
-        label="Precio"
-        type="number"
-        value={form.price.value}
-        onChangeHandler={handleChange}
-        onBlurHandler={handleBlur}
-        showErrorMessage={form.price.showError}
-        validationMessage="El precio debe ser un número mayor que 0."
-      />
-
-      <Input
-        field="amenities"
-        label="Servicios (comma separados)"
-        type="text"
-        value={form.amenities.value}
-        onChangeHandler={handleChange}
-        onBlurHandler={handleBlur}
-        showErrorMessage={form.amenities.showError}
-        validationMessage="Proporciona al menos un servicio o déjalo en blanco."
-      />
-
-      <div className="d-grid mt-3">
-        <button type="submit" className="btn btn-warning" disabled={disabled}>
-          {isLoading ? 'Actualizando...' : 'Actualizar Hotel'}
-        </button>
-      </div>
-    </form>
+    </motion.div>
   );
 };
 
-UpdateHotel.propTypes = {
-  onUpdated: PropTypes.func,
-};
-
-UpdateHotel.defaultProps = {
-  onUpdated: null,
-};
+UpdateHotel.propTypes={onUpdated:PropTypes.func};
+UpdateHotel.defaultProps={onUpdated:null};

@@ -1,80 +1,117 @@
 // src/components/events/crud/CreateEvent.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import PropTypes from 'prop-types';
+import toast from 'react-hot-toast';
 import { useCreateEvent } from '../../shared/hooks/useCreateEvent';
 import { useGetHotels } from '../../shared/hooks/useGetHotels';
 import { Input } from '../UI/Input';
 
+const initialFormState = {
+  hotel:       { value: '', isValid: false, showError: false },
+  name:        { value: '', isValid: false, showError: false },
+  description: { value: '', isValid: false, showError: false },
+  startDate:   { value: '', isValid: false, showError: false },
+  endDate:     { value: '', isValid: false, showError: false },
+  resources:   { value: '', isValid: true,  showError: false }, // opcional
+};
+
 export const CreateEvent = ({ onSuccess }) => {
   const { createEvent, isLoading } = useCreateEvent();
-  const { hotels, isLoading: loadingHotels } = useGetHotels();
+  const { hotels, isLoading: loadingHotels, error: hotelsError } = useGetHotels();
 
-  const [form, setForm] = useState({
-    hotel:       { value: '', isValid: false, showError: false },
-    name:        { value: '', isValid: false, showError: false },
-    description: { value: '', isValid: false, showError: false },
-    startDate:   { value: '', isValid: false, showError: false },
-    endDate:     { value: '', isValid: false, showError: false },
-  });
+  const [form, setForm] = useState(initialFormState);
 
-  const validate = (val) => val.trim() !== '';
-
-  const handleChange = (val, field) => {
-    const isValid = validate(val);
-    setForm(prev => ({
-      ...prev,
-      [field]: { value: val, isValid, showError: false }
-    }));
+  // Validación básica: todos los campos excepto "resources" deben tener texto
+  const validateField = (value, field) => {
+    if (field === 'resources') return true;
+    return value.trim() !== '';
   };
 
-  const handleBlur = (val, field) => {
-    const isValid = validate(val);
+  const handleChange = useCallback((value, field) => {
+    const isValid = validateField(value, field);
+    setForm(prev => ({
+      ...prev,
+      [field]: { value, isValid, showError: false }
+    }));
+  }, []);
+
+  const handleBlur = useCallback((value, field) => {
+    const isValid = validateField(value, field);
     setForm(prev => ({
       ...prev,
       [field]: { ...prev[field], isValid, showError: !isValid }
     }));
-  };
+  }, []);
 
-  const handleSubmit = async e => {
+  const handleSubmit = useCallback(async e => {
     e.preventDefault();
 
-    const isFormValid = Object.values(form).every(f => f.isValid);
-    if (!isFormValid) {
-      setForm(prev => Object.fromEntries(
-        Object.entries(prev).map(([k, f]) => [
-          k,
-          { ...f, showError: !f.isValid }
-        ])
-      ));
+    // Marcar errores de validación
+    let touched = false;
+    const newForm = { ...form };
+    Object.entries(newForm).forEach(([field, f]) => {
+      if (!f.isValid) {
+        f.showError = true;
+        touched = true;
+      }
+    });
+    if (touched) {
+      setForm(newForm);
       return;
     }
 
+    // Validar orden de fechas
+    const inDate = new Date(form.startDate.value);
+    const outDate = new Date(form.endDate.value);
+    if (inDate > outDate) {
+      setForm(prev => ({
+        ...prev,
+        startDate: { ...prev.startDate, showError: true },
+        endDate:   { ...prev.endDate,   showError: true }
+      }));
+      toast.error('La fecha de inicio debe ser anterior a la de fin');
+      return;
+    }
+
+    // Preparar recursos como array
+    const resourcesArray = form.resources.value
+      .split(',')
+      .map(r => r.trim())
+      .filter(r => r);
+
+    // Payload
     const payload = {
-      hotel: form.hotel.value,
-      name: form.name.value,
-      description: form.description.value,
-      startDate: form.startDate.value,
-      endDate: form.endDate.value,
+      hotel:       form.hotel.value,
+      name:        form.name.value.trim(),
+      description: form.description.value.trim(),
+      startDate:   form.startDate.value,
+      endDate:     form.endDate.value,
+      resources:   resourcesArray
     };
 
     const result = await createEvent(payload);
-    if (result.success && onSuccess) {
-      onSuccess(result.data.event);
-      setForm(Object.fromEntries(
-        Object.entries(form).map(([k]) => [k, { value: '', isValid: false, showError: false }])
-      ));
+    if (result.success) {
+      toast.success('Evento creado');
+      onSuccess?.(result.data.event);
+      setForm(initialFormState);
     }
-  };
+  }, [form, createEvent, onSuccess]);
 
-  const disabled =
-    isLoading ||
-    Object.values(form).some(f => !f.isValid);
+  const isFormValid = Object.values(form)
+    .filter((_, i) => i !== Object.keys(form).indexOf('resources'))
+    .every(f => f.isValid);
 
   return (
     <form onSubmit={handleSubmit} className="p-3 border rounded bg-white shadow">
       <h5 className="mb-3">Crear Evento</h5>
 
-      {/* Hotel selector */}
+      {hotelsError && (
+        <div className="alert alert-danger">
+          Error al cargar hoteles: {hotelsError.response?.data?.message || hotelsError.message}
+        </div>
+      )}
+
+      {/* Selección de hotel */}
       <div className="mb-3">
         <label htmlFor="hotelSelect" className="form-label">Hotel</label>
         <select
@@ -83,16 +120,19 @@ export const CreateEvent = ({ onSuccess }) => {
           value={form.hotel.value}
           onChange={e => handleChange(e.target.value, 'hotel')}
           onBlur={e => handleBlur(e.target.value, 'hotel')}
-          disabled={loadingHotels}
+          disabled={loadingHotels || isLoading}
         >
           <option value="">Seleccione un hotel</option>
           {hotels.map(h => (
             <option key={h._id} value={h._id}>{h.name}</option>
           ))}
         </select>
-        {form.hotel.showError && <div className="invalid-feedback">El hotel es obligatorio.</div>}
+        {form.hotel.showError && (
+          <div className="invalid-feedback">El hotel es obligatorio.</div>
+        )}
       </div>
 
+      {/* Nombre */}
       <Input
         field="name"
         label="Nombre del evento"
@@ -102,8 +142,10 @@ export const CreateEvent = ({ onSuccess }) => {
         onBlurHandler={handleBlur}
         showErrorMessage={form.name.showError}
         validationMessage="El nombre es requerido."
+        disabled={isLoading}
       />
 
+      {/* Descripción */}
       <Input
         field="description"
         label="Descripción"
@@ -114,8 +156,23 @@ export const CreateEvent = ({ onSuccess }) => {
         onBlurHandler={handleBlur}
         showErrorMessage={form.description.showError}
         validationMessage="La descripción es requerida."
+        disabled={isLoading}
       />
 
+      {/* Recursos */}
+      <Input
+        field="resources"
+        label="Recursos (comma separados)"
+        type="text"
+        value={form.resources.value}
+        onChangeHandler={handleChange}
+        onBlurHandler={handleBlur}
+        showErrorMessage={form.resources.showError}
+        validationMessage="" // opcional, no mostrado
+        disabled={isLoading}
+      />
+
+      {/* Fechas */}
       <Input
         field="startDate"
         label="Fecha de inicio"
@@ -124,7 +181,8 @@ export const CreateEvent = ({ onSuccess }) => {
         onChangeHandler={handleChange}
         onBlurHandler={handleBlur}
         showErrorMessage={form.startDate.showError}
-        validationMessage="La fecha de inicio es requerida."
+        validationMessage="Fecha de inicio es requerida."
+        disabled={isLoading}
       />
 
       <Input
@@ -135,11 +193,16 @@ export const CreateEvent = ({ onSuccess }) => {
         onChangeHandler={handleChange}
         onBlurHandler={handleBlur}
         showErrorMessage={form.endDate.showError}
-        validationMessage="La fecha de fin es requerida."
+        validationMessage="Fecha de fin es requerida."
+        disabled={isLoading}
       />
 
       <div className="d-grid mt-3">
-        <button type="submit" className="btn btn-primary" disabled={disabled}>
+        <button
+          type="submit"
+          className="btn btn-primary"
+          disabled={isLoading || !isFormValid}
+        >
           {isLoading ? 'Creando...' : 'Crear Evento'}
         </button>
       </div>

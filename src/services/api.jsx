@@ -52,18 +52,37 @@ export const login = async data => {
   }
 };
 
-// ── Hotels ─────────────────────────────────────────────────────────────────────
-export const createHotel = async data => {
+export const requestPasswordReset = async email => {
   try {
-    return await apiClient.post('/hotel/createHotel', data);
+    const { data } = await apiClient.post('/auth/request-password-reset', { email });
+    return data;
   } catch (e) {
     return handleError(e);
   }
 };
 
-export const getHotels = async () => {
+export const resetPassword = async (email, code, newPassword) => {
   try {
-    return await apiClient.get('/hotel/getHotels');
+    const { data } = await apiClient.post('/auth/reset-password', { email, code, newPassword });
+    return data;
+  } catch (e) {
+    return handleError(e);
+  }
+};
+
+// ── Hotels ─────────────────────────────────────────────────────────────────────
+// ── Hotels ─────────────────────────────────────────────────────────────────────
+export const createHotel = async data => {
+  try {
+    return await apiClient.post('/hotel/hoteles', data);
+  } catch (e) {
+    return handleError(e);
+  }
+};
+
+export const getHotels = async (filters = {}) => {
+  try {
+    return await apiClient.get('/hotel/hoteles', { params: filters });
   } catch (e) {
     return handleError(e);
   }
@@ -71,7 +90,7 @@ export const getHotels = async () => {
 
 export const getHotel = async id => {
   try {
-    return await apiClient.get(`/hotel/getHotel/${id}`);
+    return await apiClient.get(`/hotel/hoteles/${id}`);
   } catch (e) {
     return handleError(e);
   }
@@ -79,7 +98,7 @@ export const getHotel = async id => {
 
 export const updateHotel = async (id, data) => {
   try {
-    return await apiClient.put(`/hotel/updateHotel/${id}`, data);
+    return await apiClient.put(`/hotel/hoteles/${id}`, data);
   } catch (e) {
     return handleError(e);
   }
@@ -87,11 +106,12 @@ export const updateHotel = async (id, data) => {
 
 export const deleteHotel = async id => {
   try {
-    return await apiClient.delete(`/hotel/deleteHotel/${id}`);
+    return await apiClient.delete(`/hotel/hoteles/${id}`);
   } catch (e) {
     return handleError(e);
   }
 };
+
 
 // ── Rooms ──────────────────────────────────────────────────────────────────────
 export const createRoom = async data => {
@@ -145,7 +165,7 @@ export const getRoomsByHotel = async hotelId => {
 // ── Events ─────────────────────────────────────────────────────────────────────
 export const createEvent = async data => {
   try {
-    return await apiClient.post('/events/createEvent', data);
+    return await apiClient.post('/events/eventos', data);
   } catch (e) {
     return handleError(e);
   }
@@ -153,7 +173,7 @@ export const createEvent = async data => {
 
 export const getEvents = async () => {
   try {
-    return await apiClient.get('/events/getEvents');
+    return await apiClient.get('/events/eventos');
   } catch (e) {
     return handleError(e);
   }

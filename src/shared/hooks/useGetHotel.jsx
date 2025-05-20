@@ -11,8 +11,9 @@ export const useGetHotel = id => {
     setIsLoading(true);
     try {
       const response = await getHotelRequest(id);
+
       if (response.error) {
-        setError(response.details);
+        setError(response.e);
       } else {
         setHotel(response.data.hotel);
       }

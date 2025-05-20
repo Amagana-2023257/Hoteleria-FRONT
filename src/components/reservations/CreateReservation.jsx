@@ -1,5 +1,7 @@
-import React, { useState, useCallback, useEffect } from 'react';
+// src/components/hotels/crud/CreateReservation.jsx
+import React, { useState, useEffect, useCallback } from 'react';
 import PropTypes from 'prop-types';
+import toast from 'react-hot-toast';
 import { useCreateReservation } from '../../shared/hooks/useCreateReservation';
 import { useUserDetails } from '../../shared/hooks/useUserDetails';
 import { useGetHotels } from '../../shared/hooks/useGetHotels';
@@ -14,13 +16,11 @@ const initialFormState = {
 };
 
 export const CreateReservation = ({ onCreated }) => {
-  const { createReservation, isLoading: creating, error: createError } = useCreateReservation();
+  const { createReservation, isLoading: creating } = useCreateReservation();
   const { id: userId } = useUserDetails();
   const { hotels, isLoading: loadingHotels, error: hotelsError } = useGetHotels();
 
   const [form, setForm] = useState(initialFormState);
-
-  // Hook to fetch rooms for selected hotel
   const hotelId = form.hotel.value;
   const {
     rooms: hotelRooms,
@@ -28,21 +28,16 @@ export const CreateReservation = ({ onCreated }) => {
     fetchRoomsByHotel
   } = useGetRoomsByHotel(hotelId);
 
-  // When hotel changes, reset room field and fetch rooms
+  // Cargar habitaciones al cambiar de hotel
   useEffect(() => {
-    setForm(prev => ({
-      ...prev,
-      room: { value: '', isValid: false, showError: false }
-    }));
+    setForm(prev => ({ ...prev, room: initialFormState.room }));
     if (hotelId) fetchRoomsByHotel();
   }, [hotelId, fetchRoomsByHotel]);
 
-  const validateField = (value, field) => {
-    if (field === 'checkInDate' || field === 'checkOutDate') {
-      return !isNaN(Date.parse(value));
-    }
-    return value.trim() !== '';
-  };
+  const validateField = (value, field) =>
+    field.includes('Date')
+      ? !isNaN(Date.parse(value))
+      : value.trim() !== '';
 
   const handleChange = useCallback((value, field) => {
     const isValid = validateField(value, field);
@@ -62,45 +57,61 @@ export const CreateReservation = ({ onCreated }) => {
 
   const handleSubmit = useCallback(async e => {
     e.preventDefault();
-    // Validate all fields
-    const isFormValid = Object.values(form).every(f => f.isValid);
-    if (!isFormValid) {
-      setForm(prev =>
-        Object.fromEntries(
-          Object.entries(prev).map(([key, field]) => [
-            key,
-            { ...field, showError: !field.isValid }
-          ])
-        )
-      );
+
+    // Primero, marcar errores de campos vacíos
+    let newForm = { ...form };
+    Object.keys(newForm).forEach(field => {
+      if (!newForm[field].isValid) {
+        newForm[field].showError = true;
+      }
+    });
+    setForm(newForm);
+
+    // Validar form completo
+    const isFormValid = Object.values(newForm).every(f => f.isValid);
+    if (!isFormValid) return;
+
+    // Validar orden de fechas
+    const inDate = new Date(form.checkInDate.value);
+    const outDate = new Date(form.checkOutDate.value);
+    if (inDate > outDate) {
+      setForm(prev => ({
+        ...prev,
+        checkInDate:  { ...prev.checkInDate, showError: true },
+        checkOutDate: { ...prev.checkOutDate, showError: true }
+      }));
+      toast.error('La fecha de check-in debe ser anterior a la de check-out');
       return;
     }
 
-    const data = {
-      user:        userId,
-      hotel:       form.hotel.value,
-      room:        form.room.value,
+    // Enviar petición
+    const payload = {
+      user: userId,
+      hotel: hotelId,
+      room: form.room.value,
       checkInDate: form.checkInDate.value,
-      checkOutDate:form.checkOutDate.value,
+      checkOutDate: form.checkOutDate.value
     };
-
-    const result = await createReservation(data);
+    const result = await createReservation(payload);
     if (result.success) {
+      toast.success('Reservación creada');
       onCreated?.(result.data.reservation);
       setForm(initialFormState);
     }
-  }, [form, userId, createReservation, onCreated]);
+  }, [form, hotelId, userId, createReservation, onCreated]);
 
   const isFormValid = Object.values(form).every(f => f.isValid);
 
   return (
-    <form onSubmit={handleSubmit} className="p-3 border rounded">
-      <h5 className="mb-3">Crear Reservación</h5>
+    <form onSubmit={handleSubmit} className="p-3 border rounded bg-white shadow">
+      <h5 className="mb-3 font-semibold">Reservar Habitación</h5>
 
-      {createError && <div className="alert alert-danger">{createError}</div>}
-      {hotelsError && <div className="alert alert-danger">Error cargando hoteles</div>}
+      {hotelsError && (
+        <div className="alert alert-danger">
+          Error al cargar hoteles: {hotelsError.response?.data?.message || hotelsError.message}
+        </div>
+      )}
 
-      {/* Hotel selection */}
       <div className="mb-3">
         <label htmlFor="hotel" className="form-label">Hotel</label>
         <select
@@ -116,10 +127,11 @@ export const CreateReservation = ({ onCreated }) => {
             <option key={h._id} value={h._id}>{h.name}</option>
           ))}
         </select>
-        {form.hotel.showError && <div className="invalid-feedback">El hotel es requerido.</div>}
+        {form.hotel.showError && (
+          <div className="invalid-feedback">El hotel es requerido.</div>
+        )}
       </div>
 
-      {/* Room selection based on hotel */}
       <div className="mb-3">
         <label htmlFor="room" className="form-label">Habitación</label>
         <select
@@ -132,13 +144,16 @@ export const CreateReservation = ({ onCreated }) => {
         >
           <option value="">Seleccione una habitación</option>
           {hotelRooms.map(r => (
-            <option key={r._id} value={r._id}>{r.type} - Capacidad: {r.capacity}</option>
+            <option key={r._id} value={r._id}>
+              {`${r.type} - Capacidad: ${r.capacity}`}
+            </option>
           ))}
         </select>
-        {form.room.showError && <div className="invalid-feedback">La habitación es requerida.</div>}
+        {form.room.showError && (
+          <div className="invalid-feedback">La habitación es requerida.</div>
+        )}
       </div>
 
-      {/* Fechas */}
       <Input
         field="checkInDate"
         label="Fecha de Entrada"
@@ -147,7 +162,7 @@ export const CreateReservation = ({ onCreated }) => {
         onChangeHandler={handleChange}
         onBlurHandler={handleBlur}
         showErrorMessage={form.checkInDate.showError}
-        validationMessage="Fecha de entrada inválida."
+        validationMessage="Fecha inválida."
         disabled={creating}
       />
 
@@ -159,23 +174,24 @@ export const CreateReservation = ({ onCreated }) => {
         onChangeHandler={handleChange}
         onBlurHandler={handleBlur}
         showErrorMessage={form.checkOutDate.showError}
-        validationMessage="Fecha de salida inválida."
+        validationMessage="Fecha inválida."
         disabled={creating}
       />
 
-      <div className="d-grid mt-3">
-        <button type="submit" className="btn btn-primary" disabled={creating || !isFormValid}>
-          {creating ? 'Creando...' : 'Crear Reservación'}
-        </button>
-      </div>
+      <button
+        type="submit"
+        className="btn btn-primary w-full mt-3"
+        disabled={creating || !isFormValid}
+      >
+        {creating ? 'Creando...' : 'Reservar ahora'}
+      </button>
     </form>
   );
 };
 
 CreateReservation.propTypes = {
-  onCreated: PropTypes.func,
+  onCreated: PropTypes.func
 };
-
 CreateReservation.defaultProps = {
-  onCreated: null,
+  onCreated: null
 };

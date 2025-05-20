@@ -10,12 +10,15 @@ export const useCreateHotel = () => {
     setIsLoading(true);
     try {
       const response = await createHotelRequest(hotelData);
+
       if (response.error) {
-        const err = response.details;
+        const err = response.e;
         const msg = err.response?.data?.message || err.message;
         toast.error(msg);
         return { success: false };
       }
+
+      // éxito: axios retorna { data: { message, hotel }, ... }
       toast.success(response.data.message || 'Hotel creado');
       return { success: true, data: response.data };
     } catch (err) {

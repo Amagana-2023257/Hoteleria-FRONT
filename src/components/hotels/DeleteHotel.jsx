@@ -1,101 +1,76 @@
 // src/components/hotels/crud/DeleteHotel.jsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
-import { useDeleteHotel } from '../../shared/hooks/useDeleteHotel';
+import { motion } from 'framer-motion';
+import { FaTrash, FaSyncAlt } from 'react-icons/fa';
 import { useGetHotels } from '../../shared/hooks/useGetHotels';
-import { Input } from '../UI/Input';
+import { useDeleteHotel } from '../../shared/hooks/useDeleteHotel';
 
 export const DeleteHotel = ({ onDeleted }) => {
-  const { deleteHotel, isLoading } = useDeleteHotel();
   const { hotels, isLoading: loadingHotels } = useGetHotels();
+  const { deleteHotel, isLoading: deleting } = useDeleteHotel();
 
-  const [form, setForm] = useState({
-    id: { value: '', isValid: false, showError: false },
-  });
+  const [selectedId, setSelectedId] = useState('');
+  const [error, setError] = useState('');
 
-  const handleChange = (val, field) => {
-    setForm(f => ({
-      ...f,
-      [field]: { ...f[field], value: val }
-    }));
-  };
+  useEffect(() => {
+    if (selectedId) setError('');
+  }, [selectedId]);
 
-  const handleBlur = (val, field) => {
-    const isValid = val.trim() !== '';
-    setForm(f => ({
-      ...f,
-      [field]: { ...f[field], isValid, showError: !isValid }
-    }));
-  };
+  const handleSelect = e => setSelectedId(e.target.value);
 
-  const handleSelect = (e) => {
-    const selectedId = e.target.value;
-    const isValid = selectedId.trim() !== '';
-    setForm({
-      id: { value: selectedId, isValid, showError: !isValid }
-    });
-  };
-
-  const handleSubmit = async e => {
+  const handleDelete = async e => {
     e.preventDefault();
-    const { value: id } = form.id;
-    const result = await deleteHotel(id);
-    if (result.success && onDeleted) {
-      onDeleted(id);
-      setForm({ id: { value: '', isValid: false, showError: false } });
+    if (!selectedId) {
+      setError('Selecciona un hotel.');
+      return;
+    }
+    const result = await deleteHotel(selectedId);
+    if (result.success) {
+      onDeleted?.(selectedId);
+      setSelectedId('');
     }
   };
 
-  const disabled = isLoading || !form.id.isValid;
-
   return (
-    <form onSubmit={handleSubmit} className="p-4 border rounded bg-white shadow">
-      <h5 className="mb-3 font-semibold">Eliminar Hotel</h5>
+    <motion.div initial={{ opacity:0,y:20 }} animate={{ opacity:1,y:0 }} transition={{ duration:0.4 }}
+                className="container mt-4">
+      <div className="card shadow-sm">
+        <div className="card-body">
+          <h5 className="card-title mb-4">Eliminar Hotel</h5>
 
-      {/* ComboBox para seleccionar hotel */}
-      <div className="mb-3">
-        <label htmlFor="selectHotel" className="form-label">Selecciona un hotel</label>
-        <select
-          id="selectHotel"
-          className="form-select"
-          onChange={handleSelect}
-          disabled={loadingHotels}
-          value={form.id.value}
-        >
-          <option value="">-- Selecciona un hotel --</option>
-          {hotels.map(h => (
-            <option key={h._id} value={h._id}>
-              {h.name}
-            </option>
-          ))}
-        </select>
+          <form onSubmit={handleDelete} className="row g-3 align-items-end">
+            <div className="col-md-8">
+              <label htmlFor="hotelSelect" className="form-label">Selecciona un Hotel</label>
+              <div className="input-group">
+                <select id="hotelSelect" className="form-select"
+                        value={selectedId} onChange={handleSelect}
+                        disabled={loadingHotels || deleting}>
+                  <option value="">-- Selecciona --</option>
+                  {hotels.map(h => (
+                    <option key={h._id} value={h._id}>{h.name}</option>
+                  ))}
+                </select>
+                <button type="button" className="btn btn-outline-secondary"
+                        onClick={() => setSelectedId('')} disabled={deleting}>
+                  <FaSyncAlt />
+                </button>
+              </div>
+              {error && <div className="text-danger mt-1">{error}</div>}
+            </div>
+
+            <div className="col-md-4 text-end">
+              <button type="submit" className="btn btn-danger"
+                      disabled={!selectedId || deleting}>
+                {deleting ? 'Eliminando...' : <><FaTrash className="me-1"/>Eliminar</>}
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
-
-      {/* Campo ID editable */}
-      <Input
-        field="id"
-        label="ID de Hotel"
-        type="text"
-        value={form.id.value}
-        onChangeHandler={handleChange}
-        onBlurHandler={handleBlur}
-        showErrorMessage={form.id.showError}
-        validationMessage="El ID de hotel es requerido."
-      />
-
-      <div className="d-grid mt-3">
-        <button type="submit" className="btn btn-danger" disabled={disabled}>
-          {isLoading ? 'Eliminando...' : 'Eliminar Hotel'}
-        </button>
-      </div>
-    </form>
+    </motion.div>
   );
 };
 
-DeleteHotel.propTypes = {
-  onDeleted: PropTypes.func,
-};
-
-DeleteHotel.defaultProps = {
-  onDeleted: null,
-};
+DeleteHotel.propTypes = { onDeleted: PropTypes.func };
+DeleteHotel.defaultProps = { onDeleted: null };

@@ -10,12 +10,14 @@ export const useDeleteHotel = () => {
     setIsLoading(true);
     try {
       const response = await deleteHotelRequest(id);
+
       if (response.error) {
-        const err = response.details;
+        const err = response.e;
         const msg = err.response?.data?.message || err.message;
         toast.error(msg);
         return { success: false };
       }
+
       toast.success(response.data.message || 'Hotel eliminado');
       return { success: true };
     } catch (err) {

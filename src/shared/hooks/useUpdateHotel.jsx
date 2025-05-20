@@ -10,12 +10,14 @@ export const useUpdateHotel = () => {
     setIsLoading(true);
     try {
       const response = await updateHotelRequest(id, data);
+
       if (response.error) {
-        const err = response.details;
+        const err = response.e;
         const msg = err.response?.data?.message || err.message;
         toast.error(msg);
         return { success: false };
       }
+
       toast.success(response.data.message || 'Hotel actualizado');
       return { success: true, data: response.data };
     } catch (err) {

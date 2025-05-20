@@ -1,3 +1,4 @@
+// src/components/authForm/Login.jsx
 import React, { useState } from 'react';
 import PropTypes from 'prop-types';
 import { Input } from '../UI/Input';
@@ -10,7 +11,7 @@ import {
 } from '../../shared/validators';
 import { useLogin } from '../../shared/hooks';
 
-export const Login = ({ switchAuthHandler }) => {
+export const Login = ({ switchAuthHandler, onForgotPassword }) => {
   const { login, isLoading } = useLogin();
   const [form, setForm] = useState({
     email: { value: '', isValid: false, showError: false },
@@ -22,10 +23,9 @@ export const Login = ({ switchAuthHandler }) => {
   };
 
   const handleBlur = (val, field) => {
-    const isValid =
-      field === 'email'
-        ? validateEmail(val)
-        : validatePassword(val);
+    const isValid = field === 'email'
+      ? validateEmail(val)
+      : validatePassword(val);
     setForm((f) => ({
       ...f,
       [field]: { ...f[field], isValid, showError: !isValid },
@@ -37,8 +37,7 @@ export const Login = ({ switchAuthHandler }) => {
     login(form.email.value, form.password.value);
   };
 
-  const disabled =
-    isLoading || !form.email.isValid || !form.password.isValid;
+  const disabled = isLoading || !form.email.isValid || !form.password.isValid;
 
   return (
     <form onSubmit={handleSubmit} className="p-4">
@@ -74,6 +73,18 @@ export const Login = ({ switchAuthHandler }) => {
           {isLoading ? 'Cargando...' : 'Iniciar sesión'}
         </button>
       </div>
+
+      {/* Enlace para disparar el modo "restablecer contraseña" */}
+      <div className="text-center mb-3">
+        <button
+          type="button"
+          className="btn btn-link p-0 text-sm"
+          onClick={onForgotPassword}
+        >
+          ¿Olvidaste la contraseña?
+        </button>
+      </div>
+
       <div className="text-center">
         <small>
           ¿No tienes cuenta?{' '}
@@ -92,4 +103,5 @@ export const Login = ({ switchAuthHandler }) => {
 
 Login.propTypes = {
   switchAuthHandler: PropTypes.func.isRequired,
+  onForgotPassword: PropTypes.func.isRequired,
 };

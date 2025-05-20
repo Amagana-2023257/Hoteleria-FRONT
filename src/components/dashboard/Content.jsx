@@ -7,7 +7,7 @@ import { ProtectedRoute } from '../routes/ProtectedRoute';
 // Hotels
 import { CreateHotel }   from '../hotels/CreateHotel';
 import { ListHotels }    from '../hotels/ListHotels';
-import { GetHotel }      from '../hotels/GetHotel';
+import GetHotel          from '../hotels/GetHotel';
 import { UpdateHotel }   from '../hotels/UpdateHotel';
 import { DeleteHotel }   from '../hotels/DeleteHotel';
 
@@ -92,7 +92,7 @@ export const Content = () => (
       <Route
         path="rooms/create"
         element={
-          <ProtectedRoute allowedRoles={['ADMIN_GLOBAL','ADMIN_HOTEL']}>
+          <ProtectedRoute allowedRoles={['ADMIN_GLOBAL']}>
             <CreateRoom />
           </ProtectedRoute>
         }
@@ -108,7 +108,7 @@ export const Content = () => (
       <Route
         path="rooms/update/:id"
         element={
-          <ProtectedRoute allowedRoles={['ADMIN_GLOBAL','ADMIN_HOTEL']}>
+          <ProtectedRoute allowedRoles={['ADMIN_GLOBAL']}>
             <UpdateRoom />
           </ProtectedRoute>
         }
@@ -116,7 +116,7 @@ export const Content = () => (
       <Route
         path="rooms/delete/:id"
         element={
-          <ProtectedRoute allowedRoles={['ADMIN_GLOBAL','ADMIN_HOTEL']}>
+          <ProtectedRoute allowedRoles={['ADMIN_GLOBAL']}>
             <DeleteRoom />
           </ProtectedRoute>
         }
@@ -134,7 +134,7 @@ export const Content = () => (
       <Route
         path="events/create"
         element={
-          <ProtectedRoute allowedRoles={['ADMIN_GLOBAL', 'ADMIN_HOTEL','ADMIN_SERVICE']}>
+          <ProtectedRoute allowedRoles={['ADMIN_GLOBAL','ADMIN_SERVICE','ADMIN_HOTEL']}>
             <CreateEvent />
           </ProtectedRoute>
         }
@@ -150,7 +150,7 @@ export const Content = () => (
       <Route
         path="events/update/:id"
         element={
-          <ProtectedRoute allowedRoles={['ADMIN_GLOBAL', 'ADMIN_HOTEL','ADMIN_SERVICE']}>
+          <ProtectedRoute allowedRoles={['ADMIN_GLOBAL','ADMIN_SERVICE','ADMIN_HOTEL']}>
             <UpdateEvent />
           </ProtectedRoute>
         }
@@ -158,7 +158,7 @@ export const Content = () => (
       <Route
         path="events/delete/:id"
         element={
-          <ProtectedRoute allowedRoles={['ADMIN_GLOBAL', 'ADMIN_HOTEL','ADMIN_SERVICE']}>
+          <ProtectedRoute allowedRoles={['ADMIN_GLOBAL','ADMIN_SERVICE','ADMIN_HOTEL']}>
             <DeleteEvent />
           </ProtectedRoute>
         }
@@ -176,7 +176,7 @@ export const Content = () => (
       <Route
         path="reservations/create"
         element={
-          <ProtectedRoute allowedRoles={['ADMIN_GLOBAL','USER_ROLE']}>
+          <ProtectedRoute allowedRoles={['USER_ROLE']}>
             <CreateReservation />
           </ProtectedRoute>
         }
@@ -184,7 +184,7 @@ export const Content = () => (
       <Route
         path="reservations/:id"
         element={
-          <ProtectedRoute allowedRoles={['ADMIN_GLOBAL','ADMIN_HOTEL']}>
+          <ProtectedRoute allowedRoles={['ADMIN_GLOBAL','ADMIN_HOTEL','USER_ROLE']}>
             <GetReservation />
           </ProtectedRoute>
         }
