@@ -1,0 +1,106 @@
+/* StartPage.css */
+
+/* Reset ligero para la sección hero */
+.hero,
+.bg-dark {
+  background-color: #1e1e1e;
+  color: #f5f5f5;
+}
+
+/* HeroSection */
+.display-4 {
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+.lead {
+  font-size: 1.25rem;
+  opacity: 0.9;
+}
+
+/* Secciones */
+.section {
+  padding-top: 3rem;
+  padding-bottom: 3rem;
+}
+.mb-5 {
+  margin-bottom: 3rem !important;
+}
+.mb-4 {
+  margin-bottom: 1.5rem !important;
+}
+
+/* Títulos de sección */
+h2 {
+  font-size: 2rem;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+  position: relative;
+}
+h2::after {
+  content: '';
+  display: block;
+  width: 4rem;
+  height: 3px;
+  background: #f5c518;
+  margin-top: 0.5rem;
+}
+
+/* Tarjetas de galería */
+.gallery__item {
+  cursor: pointer;
+}
+.event-card {
+  background: #2a2a2a;
+  border-radius: 0.5rem;
+  padding: 2rem 1rem;
+  text-align: center;
+  transition: transform 0.3s ease;
+}
+.event-card:hover {
+  transform: translateY(-5px);
+}
+.event-card__icon {
+  color: #f5c518;
+}
+.overlay__title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 0.5rem 0;
+}
+.text-muted {
+  opacity: 0.7;
+}
+
+/* Testimonials */
+.blockquote {
+  background: #2a2a2a;
+  border-left: 0.25rem solid #f5c518;
+  padding: 1.5rem;
+  border-radius: 0.5rem;
+  color: #e0e0e0;
+  transition: transform 0.3s ease;
+}
+.blockquote:hover {
+  transform: scale(1.02);
+}
+.blockquote-footer {
+  display: block;
+  margin-top: 1rem;
+  font-size: 0.9rem;
+  color: #aaa;
+}
+
+/* Footer */
+.footer {
+  background: #171717;
+  padding: 2rem 0;
+  color: #888;
+  font-size: 0.9rem;
+}
+.footer a {
+  color: #f5c518;
+  text-decoration: none;
+}
+.footer a:hover {
+  text-decoration: underline;
+}

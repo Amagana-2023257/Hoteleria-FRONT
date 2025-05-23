@@ -1,126 +1,127 @@
 // src/components/events/crud/GetEvent.jsx
 import React, { useState, useEffect } from 'react';
-import PropTypes from 'prop-types';
-import { useGetEvent } from '../../shared/hooks/useGetEvent';
-import { useGetEvents } from '../../shared/hooks/useGetEvents'; // Para obtener todos los eventos
-import { Input } from '../UI/Input';
+import { useGetEvents } from '../../shared/hooks/useGetEvents';
+import { useGetEvent }  from '../../shared/hooks/useGetEvent';
+import { motion }       from 'framer-motion';
+import { FaSearch }     from 'react-icons/fa';
+
+const formatDate = iso => {
+  const d = new Date(iso);
+  return d.toLocaleDateString('es-GT');
+};
 
 export const GetEvent = () => {
-  const { events, isLoading: loadingEvents, error: eventsError, fetchEvents } = useGetEvents();
-  const { event, isLoading, error, fetchEvent } = useGetEvent();
-
   const [eventId, setEventId] = useState('');
-  const [selectedEventId, setSelectedEventId] = useState('');
+  const [errorId, setErrorId] = useState(false);
 
-  // Cargar eventos al montar el componente
+  const { events, isLoading: loadingList, error: listError, fetchEvents } = useGetEvents();
+  const { event, isLoading: loadingEvent, error: fetchError, fetchEvent } = useGetEvent(eventId);
+
   useEffect(() => {
-    fetchEvents();
-  }, [fetchEvents]);
+    if (events.length === 0) fetchEvents();
+  }, []);
 
-  // Manejar la selección de evento
-  const handleSelectEvent = (eventId) => {
-    setSelectedEventId(eventId);
-    fetchEvent(eventId); // Llama a la función de obtener evento al seleccionar uno
+  const handleChange = e => {
+    setEventId(e.target.value);
+    if (e.target.value.trim()) setErrorId(false);
   };
 
-  // Manejar el cambio del ID manualmente
-  const handleChange = (val) => {
-    setEventId(val);
-  };
-
-  // Validar el ID del evento
-  const handleBlur = () => {
-    if (!eventId.trim()) {
-      setEventId('');
-    }
-  };
-
-  const handleFetch = (e) => {
+  const handleSearch = e => {
     e.preventDefault();
-    if (eventId.trim()) {
-      fetchEvent(eventId);
+    if (!eventId.trim()) {
+      setErrorId(true);
+      return;
     }
+    fetchEvent();
   };
 
   return (
-    <div className="p-3 border rounded bg-white shadow">
-      <h5 className="mb-3">Obtener Evento</h5>
+    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}
+                className="container mt-4">
+      <div className="card shadow-sm">
+        <div className="card-body">
+          <h5 className="card-title mb-4">Buscar Evento por ID</h5>
 
-      {/* Buscar por ID o seleccionar un evento */}
-      <form onSubmit={handleFetch}>
-        {/* Campo para introducir el ID del evento */}
-        <div className="mb-3">
-          <label htmlFor="eventId" className="form-label">Buscar Evento por ID</label>
-          <Input
-            field="eventId"
-            label="ID del Evento"
-            type="text"
-            value={eventId}
-            onChangeHandler={handleChange}
-            onBlurHandler={handleBlur}
-            showErrorMessage={eventId.trim() === ''}
-            validationMessage="El ID del evento es requerido."
-          />
+          <form onSubmit={handleSearch} className="row g-3 align-items-end">
+            <div className="col-md-6">
+              <label htmlFor="eventId" className="form-label">ID de Evento</label>
+              <div className="input-group">
+                <span className="input-group-text bg-white border-end-0"><FaSearch /></span>
+                <input
+                  id="eventId"
+                  type="text"
+                  className={`form-control border-start-0 ${errorId ? 'is-invalid' : ''}`}
+                  placeholder="Ingresa ID"
+                  value={eventId}
+                  onChange={handleChange}
+                />
+                <div className="invalid-feedback">El ID de evento es requerido.</div>
+              </div>
+            </div>
+
+            <div className="col-md-6">
+              <label htmlFor="selectEvent" className="form-label">O seleccionar un evento</label>
+              <select
+                id="selectEvent"
+                className="form-select"
+                value={eventId}
+                onChange={handleChange}
+                disabled={loadingList}
+              >
+                <option value="">-- Selecciona --</option>
+                {events.map(evt => (
+                  <option key={evt._id} value={evt._id}>
+                    {evt.name} ({formatDate(evt.startDate)})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="col-12 text-end">
+              <button type="submit" className="btn btn-primary" disabled={loadingEvent}>
+                {loadingEvent ? 'Buscando...' : 'Buscar'}
+              </button>
+            </div>
+          </form>
+
+          {listError && (
+            <motion.div className="alert alert-danger mt-3" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+              Error al cargar lista de eventos: {listError.message}
+            </motion.div>
+          )}
+
+          {fetchError && (
+            <motion.div className="alert alert-danger mt-3" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+              Error al buscar evento: {fetchError.message || 'Intenta de nuevo.'}
+            </motion.div>
+          )}
+
+          {event && (
+            <motion.div className="mt-4" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+              <h6 className="mb-3">Detalles del Evento</h6>
+              <ul className="list-group">
+                {[
+                  ['ID', event._id],
+                  ['Nombre', event.name],
+                  ['Descripción', event.description || '—'],
+                  ['Inicio', formatDate(event.startDate)],
+                  ['Fin', formatDate(event.endDate)],
+                  ['Hotel', event.hotel?.name || '—'],
+                  ['Recursos', event.resources?.length ? event.resources.join(', ') : '—'],
+                  ['Creado', formatDate(event.createdAt)],
+                  ['Actualizado', formatDate(event.updatedAt)]
+                ].map(([label, value], i) => (
+                  <li key={i} className="list-group-item">
+                    <strong>{label}:</strong> {value}
+                  </li>
+                ))}
+              </ul>
+            </motion.div>
+          )}
         </div>
-
-        {/* Combo Box para seleccionar un evento */}
-        <div className="mb-3">
-          <label htmlFor="eventSelect" className="form-label">Seleccionar Evento</label>
-          <select
-            id="eventSelect"
-            className="form-select"
-            value={selectedEventId}
-            onChange={e => handleSelectEvent(e.target.value)}
-            disabled={loadingEvents || isLoading}
-          >
-            <option value="">-- Selecciona un evento --</option>
-            {events.map(evt => (
-              <option key={evt._id} value={evt._id}>
-                {evt.name} - {new Date(evt.startDate).toLocaleDateString()}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {/* Botón para cargar el evento */}
-        <button className="btn btn-secondary w-full" type="submit" disabled={isLoading || !eventId.trim()}>
-          {isLoading ? 'Cargando...' : 'Cargar Evento'}
-        </button>
-      </form>
-
-      {/* Mostrar errores globales */}
-      {eventsError && (
-        <div className="mt-3 text-red-600">
-          Error al cargar eventos: {eventsError.message || 'Intenta de nuevo.'}
-        </div>
-      )}
-
-      {/* Mostrar los detalles del evento */}
-      {event && (
-        <div className="mt-5">
-          <h6 className="font-semibold mb-2">Detalles del Evento:</h6>
-          <ul className="list-disc list-inside space-y-1">
-            <li><strong>ID:</strong> {event._id}</li>
-            <li><strong>Nombre:</strong> {event.name}</li>
-            <li><strong>Descripción:</strong> {event.description}</li>
-            <li><strong>Fecha de inicio:</strong> {new Date(event.startDate).toLocaleDateString()}</li>
-            <li><strong>Fecha de fin:</strong> {new Date(event.endDate).toLocaleDateString()}</li>
-            {event.hotel && <li><strong>Hotel:</strong> {event.hotel.name}</li>}
-            {event.resources && event.resources.length > 0 && (
-              <li><strong>Recursos:</strong> {event.resources.join(', ')}</li>
-            )}
-          </ul>
-        </div>
-      )}
-
-      {/* Mensaje de error si no se encuentra el evento */}
-      {error && (
-        <div className="alert alert-danger">
-          Error al cargar el evento: {error.message || 'Revisa el ID e inténtalo de nuevo.'}
-        </div>
-      )}
-    </div>
+      </div>
+    </motion.div>
   );
 };
 
-GetEvent.propTypes = {};
+export default GetEvent;

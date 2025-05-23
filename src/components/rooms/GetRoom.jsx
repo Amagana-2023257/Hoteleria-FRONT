@@ -1,110 +1,129 @@
 // src/components/rooms/crud/GetRoom.jsx
 import React, { useState } from 'react';
-import PropTypes from 'prop-types';
 import { useGetRoom } from '../../shared/hooks/useGetRoom';
 import { useGetRooms } from '../../shared/hooks/useGetRooms';
-import { Input } from '../UI/Input';
+import { motion } from 'framer-motion';
+import { FaSearch } from 'react-icons/fa';
 
-export const GetRoom = () => {
-  const [roomId, setRoomId] = useState({ value: '', isValid: false, showError: false });
-  const { room, isLoading, error, fetchRoom } = useGetRoom(roomId.value);
+const formatDate = iso => {
+  const d = new Date(iso);
+  return d.toLocaleDateString('es-GT');
+};
+
+const GetRoom = () => {
+  const [roomId, setRoomId] = useState('');
+  const [errorId, setErrorId] = useState(false);
+
   const { rooms, isLoading: loadingRooms } = useGetRooms();
+  const { room, isLoading: loadingRoom, error: fetchError, fetchRoom } = useGetRoom(roomId);
 
-  const handleChange = val => {
-    setRoomId({ value: val, isValid: val.trim() !== '', showError: false });
+  const handleChange = e => {
+    setRoomId(e.target.value);
+    if (e.target.value.trim()) setErrorId(false);
   };
-
-  const handleBlur = () => {
-    if (!roomId.value.trim()) {
-      setRoomId(id => ({ ...id, isValid: false, showError: true }));
-    }
-  };
-
-  const handleSelect = (e) => {
-    const selectedId = e.target.value;
-    setRoomId({ value: selectedId, isValid: selectedId !== '', showError: false });
-  };
-
-  const handleFetch = e => {
+  const handleSearch = e => {
     e.preventDefault();
-    if (roomId.isValid) {
-      fetchRoom();
-    } else {
-      setRoomId(id => ({ ...id, showError: true }));
+    if (!roomId.trim()) {
+      setErrorId(true);
+      return;
     }
+    fetchRoom();
   };
 
   return (
-    <div className="p-3 border rounded">
-      <h5 className="mb-3">Obtener Habitación</h5>
-      <form onSubmit={handleFetch}>
-        {/* ComboBox de habitaciones */}
-        <div className="mb-3">
-          <label htmlFor="roomSelect" className="form-label">Seleccionar una habitación</label>
-          <select
-            id="roomSelect"
-            className="form-select"
-            onChange={handleSelect}
-            value={roomId.value}
-            disabled={loadingRooms}
-          >
-            <option value="">-- Selecciona una habitación --</option>
-            {rooms.map(r => (
-              <option key={r._id} value={r._id}>
-                Habitación {r.number} - {r.type} (Hotel: {r.hotel?.name || r.hotel})
-              </option>
-            ))}
-          </select>
-        </div>
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4 }}
+      className="container mt-4"
+    >
+      <div className="card shadow-sm">
+        <div className="card-body">
+          <h5 className="card-title mb-4">Buscar Habitación por ID</h5>
 
-        {/* Campo manual por si desean pegar ID */}
-        <Input
-          field="roomId"
-          label="ID de Habitación"
-          type="text"
-          value={roomId.value}
-          onChangeHandler={handleChange}
-          onBlurHandler={handleBlur}
-          showErrorMessage={roomId.showError}
-          validationMessage="El ID de habitación es requerido."
-        />
+          <form onSubmit={handleSearch} className="row g-3 align-items-end">
+            <div className="col-md-6">
+              <label htmlFor="roomId" className="form-label">ID de Habitación</label>
+              <div className="input-group">
+                <span className="input-group-text bg-white border-end-0"><FaSearch /></span>
+                <input
+                  id="roomId"
+                  type="text"
+                  className={`form-control border-start-0 ${errorId ? 'is-invalid' : ''}`}
+                  placeholder="Ingresa ID"
+                  value={roomId}
+                  onChange={handleChange}
+                />
+                <div className="invalid-feedback">El ID de habitación es requerido.</div>
+              </div>
+            </div>
 
-        <div className="d-grid mb-3">
-          <button className="btn btn-secondary" type="submit" disabled={isLoading}>
-            {isLoading ? 'Cargando...' : 'Cargar Habitación'}
-          </button>
-        </div>
-      </form>
+            <div className="col-md-6">
+              <label htmlFor="selectRoom" className="form-label">O seleccionar una habitación</label>
+              <select
+                id="selectRoom"
+                className="form-select"
+                value={roomId}
+                onChange={handleChange}
+                disabled={loadingRooms}
+              >
+                <option value="">-- Selecciona --</option>
+                {rooms.map(r => (
+                  <option key={r._id} value={r._id}>
+                    {r.type} — {r.hotel?.name}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-      {error && (
-        <div className="alert alert-danger">
-          Error al cargar habitación: {error.message || 'Revisa el ID e inténtalo de nuevo.'}
-        </div>
-      )}
+            <div className="col-12 text-end">
+              <button type="submit" className="btn btn-primary" disabled={loadingRoom}>
+                {loadingRoom ? 'Buscando...' : 'Buscar'}
+              </button>
+            </div>
+          </form>
 
-      {room && (
-        <div className="mt-3">
-          <h6>Detalles de la Habitación:</h6>
-          <ul className="list-group">
-            <li className="list-group-item"><strong>ID:</strong> {room._id}</li>
-            <li className="list-group-item"><strong>Hotel:</strong> {room.hotel?.name || room.hotel}</li>
-            <li className="list-group-item"><strong>Número:</strong> {room.number}</li>
-            <li className="list-group-item"><strong>Tipo:</strong> {room.type}</li>
-            <li className="list-group-item"><strong>Capacidad:</strong> {room.capacity} personas</li>
-            <li className="list-group-item"><strong>Precio:</strong> Q{room.price}</li>
-            <li className="list-group-item">
-              <strong>Disponibilidad:</strong> 
-              {room.availability && room.availability.length > 0 
-                ? room.availability.map((date, index) => (
-                    <span key={index} className="badge bg-info mx-1">{new Date(date).toLocaleDateString()}</span>
-                  ))
-                : 'No disponible'}
-            </li>
-          </ul>
+          {fetchError && (
+            <motion.div
+              className="alert alert-danger mt-3"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+            >
+              Error al buscar habitación: {fetchError.message || 'Intenta de nuevo.'}
+            </motion.div>
+          )}
+
+          {room && (
+            <motion.div
+              className="mt-4"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+            >
+              <h6 className="mb-3">Detalles de la Habitación</h6>
+              <ul className="list-group">
+                {[
+                  ['ID', room._id],
+                  ['Hotel', room.hotel?.name || '—'],
+                  ['Tipo', room.type],
+                  ['Descripción', room.description || '—'],
+                  ['Capacidad', `${room.capacity} pax`],
+                  ['Precio', `Q${room.price.toFixed(2)}`],
+                  ['Disponibilidad', room.availability === 'available' ? 'Disponible' : 'No disponible'],
+                  ['Disponible desde', formatDate(room.availabilityDate)],
+                  ['Creada', formatDate(room.createdAt)],
+                  ['Actualizada', formatDate(room.updatedAt)]
+                ].map(([label, value], i) => (
+                  <li key={i} className="list-group-item">
+                    <strong>{label}:</strong> {value}
+                  </li>
+                ))}
+              </ul>
+            </motion.div>
+          )}
         </div>
-      )}
-    </div>
+      </div>
+    </motion.div>
   );
 };
 
-GetRoom.propTypes = {};
+export default GetRoom;

@@ -3,7 +3,7 @@ import { Link, NavLink } from 'react-router-dom';
 import { useUserDetails } from '../../shared/hooks';
 
 
-export const Navbar = () => {
+export const NavBar = () => {
   const { isLogged, logout } = useUserDetails();
 
   return (

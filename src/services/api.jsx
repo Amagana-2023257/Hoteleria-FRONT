@@ -181,7 +181,7 @@ export const getEvents = async () => {
 
 export const getEvent = async id => {
   try {
-    return await apiClient.get(`/events/getEvent/${id}`);
+    return await apiClient.get(`/events/eventos/${id}`);
   } catch (e) {
     return handleError(e);
   }
@@ -189,7 +189,7 @@ export const getEvent = async id => {
 
 export const updateEvent = async (id, data) => {
   try {
-    return await apiClient.put(`/events/updateEvent/${id}`, data);
+    return await apiClient.put(`/events/eventos/${id}`, data);
   } catch (e) {
     return handleError(e);
   }
@@ -197,7 +197,7 @@ export const updateEvent = async (id, data) => {
 
 export const deleteEvent = async id => {
   try {
-    return await apiClient.delete(`/events/deleteEvent/${id}`);
+    return await apiClient.delete(`/events/eventos/${id}`);
   } catch (e) {
     return handleError(e);
   }
@@ -206,7 +206,7 @@ export const deleteEvent = async id => {
 // ── Reservations ────────────────────────────────────────────────────────────────
 export const createReservation = async data => {
   try {
-    return await apiClient.post('/reservation/createReservation', data);
+    return await apiClient.post('/reservation/reservaciones', data);
   } catch (e) {
     return handleError(e);
   }
@@ -214,7 +214,7 @@ export const createReservation = async data => {
 
 export const getReservations = async () => {
   try {
-    return await apiClient.get('/reservation/getReservations');
+    return await apiClient.get('/reservation/reservaciones');
   } catch (e) {
     return handleError(e);
   }
@@ -222,7 +222,7 @@ export const getReservations = async () => {
 
 export const getReservation = async id => {
   try {
-    return await apiClient.get(`/reservation/getReservation/${id}`);
+    return await apiClient.get(`/reservation/reservaciones/${id}`);
   } catch (e) {
     return handleError(e);
   }
@@ -230,7 +230,7 @@ export const getReservation = async id => {
 
 export const updateReservation = async (id, data) => {
   try {
-    return await apiClient.put(`/reservation/updateReservation/${id}`, data);
+    return await apiClient.put(`/reservation/reservaciones/${id}`, data);
   } catch (e) {
     return handleError(e);
   }
@@ -238,7 +238,7 @@ export const updateReservation = async (id, data) => {
 
 export const deleteReservation = async id => {
   try {
-    return await apiClient.delete(`/reservation/deleteReservation/${id}`);
+    return await apiClient.delete(`/reservation/reservaciones/${id}`);
   } catch (e) {
     return handleError(e);
   }

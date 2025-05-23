@@ -1,5 +1,5 @@
 import React from 'react';
-import { Navbar } from '../../components/nav/Navbar';
+import { NavBar } from '../../components/nav/NavBar';
 import { Sidebar } from '../../components/nav/Sidebar';
 import { Content } from '../../components/dashboard/Content';
 import './Dashboard.css';
@@ -10,7 +10,7 @@ export const DashboardPage = () => {
       <Sidebar />
 
       <div className="d-flex flex-column flex-grow-1">
-        <Navbar />
+        <NavBar />
 
         <Content />
       </div>

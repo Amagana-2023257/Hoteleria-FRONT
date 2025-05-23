@@ -14,7 +14,7 @@ import { DeleteHotel }   from '../hotels/DeleteHotel';
 // Rooms
 import { CreateRoom }    from '../rooms/CreateRoom';
 import { ListRooms }     from '../rooms/ListRooms';
-import { GetRoom }       from '../rooms/GetRoom';
+import GetRoom from '../rooms/GetRoom';
 import { UpdateRoom }    from '../rooms/UpdateRoom';
 import { DeleteRoom }    from '../rooms/DeleteRoom';
 

@@ -1,96 +1,91 @@
 // src/components/rooms/crud/UpdateRoom.jsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
+import { motion } from 'framer-motion';
 import { useUpdateRoom } from '../../shared/hooks/useUpdateRoom';
 import { useGetRooms } from '../../shared/hooks/useGetRooms';
 import { Input } from '../UI/Input';
 
 export const UpdateRoom = ({ onUpdated }) => {
-  const { updateRoom, isLoading } = useUpdateRoom();
+  const { updateRoom, isLoading: updating } = useUpdateRoom();
   const { rooms, isLoading: loadingRooms } = useGetRooms();
 
-  const [form, setForm] = useState({
-    id:           { value: '', isValid: false, showError: false },
-    hotel:        { value: '', isValid: false, showError: false },
-    type:         { value: '', isValid: false, showError: false },
-    capacity:     { value: '', isValid: false, showError: false },
-    price:        { value: '', isValid: false, showError: false },
-    availability: { value: [], isValid: true, showError: false },
-  });
+  const emptyForm = {
+    id:               { value: '', isValid: false, showError: false },
+    hotel:            { value: '', isValid: false, showError: false },
+    type:             { value: '', isValid: false, showError: false },
+    description:      { value: '', isValid: true,  showError: false },
+    capacity:         { value: '', isValid: false, showError: false },
+    price:            { value: '', isValid: false, showError: false },
+    availability:     { value: 'available', isValid: true, showError: false },
+    availabilityDate: { value: '', isValid: false, showError: false },
+  };
 
-  const [selectedDate, setSelectedDate] = useState('');
+  const [form, setForm] = useState(emptyForm);
 
-  const validate = (value, field) => {
-    if (['price', 'capacity'].includes(field)) {
-      const n = Number(value);
+  // Validaciones simples
+  const validate = (v, field) => {
+    if (['price','capacity'].includes(field)) {
+      const n = Number(v);
       return Number.isFinite(n) && n > 0;
     }
-    return value.trim() !== '';
+    if (field === 'availabilityDate') {
+      return v.trim() !== '';
+    }
+    return v.trim() !== '';
   };
 
-  const handleChange = (val, field) => {
-    setForm(prev => ({
-      ...prev,
-      [field]: { value: val, isValid: validate(val, field), showError: false }
-    }));
-  };
-
-  const handleBlur = (val, field) => {
-    const isValid = validate(val, field);
-    setForm(prev => ({
-      ...prev,
-      [field]: { ...prev[field], isValid, showError: !isValid }
-    }));
-  };
-
-  const handleSelect = (id) => {
-    const room = rooms.find(r => r._id === id);
-    if (!room) return;
-
+  // Al seleccionar una habitación, cargamos sus datos
+  const handleSelect = id => {
+    const r = rooms.find(x => x._id === id);
+    if (!r) {
+      setForm(emptyForm);
+      return;
+    }
     setForm({
-      id:           { value: room._id, isValid: true, showError: false },
-      hotel:        { value: room.hotel?.name || room.hotel, isValid: true, showError: false },
-      type:         { value: room.type, isValid: true, showError: false },
-      capacity:     { value: String(room.capacity), isValid: true, showError: false },
-      price:        { value: String(room.price), isValid: true, showError: false },
-      availability: { value: room.availability.map(date => new Date(date).toISOString().split('T')[0]), isValid: true, showError: false },
+      id:               { value: r._id, isValid: true, showError: false },
+      hotel:            { value: r.hotel?._id || '', isValid: true, showError: false },
+      type:             { value: r.type, isValid: true, showError: false },
+      description:      { value: r.description, isValid: true, showError: false },
+      capacity:         { value: String(r.capacity), isValid: true, showError: false },
+      price:            { value: String(r.price), isValid: true, showError: false },
+      availability:     { value: r.availability, isValid: true, showError: false },
+      availabilityDate: {
+        value: r.availabilityDate
+                 ? new Date(r.availabilityDate).toISOString().split('T')[0]
+                 : '',
+        isValid: Boolean(r.availabilityDate),
+        showError: false
+      },
     });
   };
 
-  const handleAddDate = () => {
-    if (selectedDate && !form.availability.value.includes(selectedDate)) {
-      setForm(prev => ({
-        ...prev,
-        availability: {
-          value: [...prev.availability.value, selectedDate],
-          isValid: true,
-          showError: false
-        }
-      }));
-      setSelectedDate('');
-    }
-  };
-
-  const handleRemoveDate = (dateToRemove) => {
+  // Cambios en inputs
+  const handleChange = (v, f) => {
+    const ok = validate(v, f);
     setForm(prev => ({
       ...prev,
-      availability: {
-        ...prev.availability,
-        value: prev.availability.value.filter(date => date !== dateToRemove)
-      }
+      [f]: { value: v, isValid: ok, showError: false }
+    }));
+  };
+  const handleBlur = (v, f) => {
+    const ok = validate(v, f);
+    setForm(prev => ({
+      ...prev,
+      [f]: { ...prev[f], isValid: ok, showError: !ok }
     }));
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async e => {
     e.preventDefault();
-    const isFormValid = Object.values(form).every(f => f.isValid);
-
-    if (!isFormValid) {
+    // marcar errores si faltan
+    const valid = Object.values(form).every(f => f.isValid);
+    if (!valid) {
       setForm(prev =>
         Object.fromEntries(
-          Object.entries(prev).map(([key, val]) => [
-            key,
-            { ...val, showError: !val.isValid }
+          Object.entries(prev).map(([k, fld]) => [
+            k,
+            { ...fld, showError: !fld.isValid }
           ])
         )
       );
@@ -98,141 +93,168 @@ export const UpdateRoom = ({ onUpdated }) => {
     }
 
     const payload = {
-      type: form.type.value,
-      capacity: Number(form.capacity.value),
-      price: Number(form.price.value),
-      availability: form.availability.value.map(d => new Date(d)),
+      hotel:            form.hotel.value,
+      type:             form.type.value.trim(),
+      description:      form.description.value.trim(),
+      capacity:         Number(form.capacity.value),
+      price:            Number(form.price.value),
+      availability:     form.availability.value,
+      availabilityDate: new Date(form.availabilityDate.value),
     };
 
-    const result = await updateRoom(form.id.value, payload);
-    if (result.success && onUpdated) {
-      onUpdated(result.data.room);
-      setForm(prev =>
-        Object.fromEntries(
-          Object.entries(prev).map(([key]) => [
-            key,
-            { value: key === 'availability' ? [] : '', isValid: false, showError: false }
-          ])
-        )
-      );
+    const res = await updateRoom(form.id.value, payload);
+    if (res.success) {
+      onUpdated?.(res.data.room);
+      setForm(emptyForm);
     }
   };
 
-  const isAvailable = () => {
-    return form.availability.value.some(date => new Date(date) > new Date());
-  };
-
   return (
-    <form onSubmit={handleSubmit} className="p-4 border rounded bg-white shadow">
-      <h5 className="mb-4">Actualizar Habitación</h5>
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+      className="container mt-4"
+    >
+      <form
+        onSubmit={handleSubmit}
+        className="card shadow-sm p-4 rounded"
+      >
+        <h5 className="mb-4">Actualizar Habitación</h5>
 
-      <div className="mb-3">
-        <label htmlFor="roomSelect" className="form-label">Seleccionar habitación</label>
-        <select
-          id="roomSelect"
-          className="form-select"
-          onChange={e => handleSelect(e.target.value)}
-          disabled={loadingRooms}
-        >
-          <option value="">-- Selecciona una habitación --</option>
-          {rooms.map(room => (
-            <option key={room._id} value={room._id}>
-              {room.type} - {room._id.slice(-6)}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      <Input
-        field="type"
-        label="Tipo"
-        type="text"
-        value={form.type.value}
-        onChangeHandler={handleChange}
-        onBlurHandler={handleBlur}
-        showErrorMessage={form.type.showError}
-        validationMessage="El tipo es obligatorio."
-        disabled={isLoading}
-      />
-
-      <Input
-        field="capacity"
-        label="Capacidad"
-        type="number"
-        value={form.capacity.value}
-        onChangeHandler={handleChange}
-        onBlurHandler={handleBlur}
-        showErrorMessage={form.capacity.showError}
-        validationMessage="Debe ser un número válido mayor que 0."
-        disabled={isLoading}
-      />
-
-      <Input
-        field="price"
-        label="Precio"
-        type="number"
-        value={form.price.value}
-        onChangeHandler={handleChange}
-        onBlurHandler={handleBlur}
-        showErrorMessage={form.price.showError}
-        validationMessage="Debe ser un número válido mayor que 0."
-        disabled={isLoading}
-      />
-
-      {/* Calendario para disponibilidad */}
-      <div className="mb-3">
-        <label className="form-label">Agregar fechas de disponibilidad</label>
-        <div className="d-flex gap-2">
-          <input
-            type="date"
-            className="form-control"
-            value={selectedDate}
-            onChange={e => setSelectedDate(e.target.value)}
-            disabled={isLoading}
-          />
-          <button
-            type="button"
-            className="btn btn-outline-secondary"
-            onClick={handleAddDate}
-            disabled={!selectedDate || isLoading}
+        {/* Selección */}
+        <div className="mb-3">
+          <label htmlFor="roomSelect" className="form-label">
+            Seleccionar habitación
+          </label>
+          <select
+            id="roomSelect"
+            className="form-select"
+            onChange={e => handleSelect(e.target.value)}
+            disabled={loadingRooms || updating}
+            value={form.id.value}
           >
-            Agregar
+            <option value="">-- Elige una habitación --</option>
+            {rooms.map(r => (
+              <option key={r._id} value={r._id}>
+                {r.type} — {r._id.slice(-6)}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Tipo */}
+        <Input
+          field="type"
+          label="Tipo"
+          type="text"
+          value={form.type.value}
+          onChangeHandler={handleChange}
+          onBlurHandler={handleBlur}
+          showErrorMessage={form.type.showError}
+          validationMessage="El tipo es obligatorio."
+          disabled={updating}
+        />
+
+        {/* Descripción */}
+        <Input
+          field="description"
+          label="Descripción"
+          textArea
+          value={form.description.value}
+          onChangeHandler={handleChange}
+          onBlurHandler={handleBlur}
+          showErrorMessage={false}
+          validationMessage=""
+          disabled={updating}
+        />
+
+        {/* Capacidad & Precio */}
+        <div className="row">
+          <div className="col-md-6">
+            <Input
+              field="capacity"
+              label="Capacidad"
+              type="number"
+              value={form.capacity.value}
+              onChangeHandler={handleChange}
+              onBlurHandler={handleBlur}
+              showErrorMessage={form.capacity.showError}
+              validationMessage="Número mayor que 0."
+              disabled={updating}
+            />
+          </div>
+          <div className="col-md-6">
+            <Input
+              field="price"
+              label="Precio"
+              type="number"
+              value={form.price.value}
+              onChangeHandler={handleChange}
+              onBlurHandler={handleBlur}
+              showErrorMessage={form.price.showError}
+              validationMessage="Número mayor que 0."
+              disabled={updating}
+            />
+          </div>
+        </div>
+
+        {/* Disponibilidad */}
+        <div className="row g-3 mt-3">
+          <div className="col-md-6">
+            <label htmlFor="availability" className="form-label">
+              Disponibilidad
+            </label>
+            <select
+              id="availability"
+              className="form-select"
+              value={form.availability.value}
+              onChange={e => handleChange(e.target.value, 'availability')}
+              disabled={updating}
+            >
+              <option value="available">Disponible</option>
+              <option value="not available">No disponible</option>
+            </select>
+          </div>
+          <div className="col-md-6">
+            <label htmlFor="availabilityDate" className="form-label">
+              Fecha de Disponibilidad
+            </label>
+            <input
+              id="availabilityDate"
+              type="date"
+              className={`form-control ${form.availabilityDate.showError ? 'is-invalid' : ''}`}
+              value={form.availabilityDate.value}
+              onChange={e => handleChange(e.target.value, 'availabilityDate')}
+              onBlur={e => handleBlur(e.target.value, 'availabilityDate')}
+              disabled={updating}
+            />
+            {form.availabilityDate.showError && (
+              <div className="invalid-feedback">
+                La fecha de disponibilidad es obligatoria.
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Botón */}
+        <div className="d-grid mt-4">
+          <button
+            type="submit"
+            className="btn btn-warning"
+            disabled={updating || !form.id.isValid}
+          >
+            {updating ? 'Actualizando…' : 'Actualizar Habitación'}
           </button>
         </div>
-        <div className="mt-2 d-flex flex-wrap gap-2">
-          {form.availability.value.map(date => (
-            <span key={date} className="badge bg-info">
-              {new Date(date).toLocaleDateString()}
-              <button
-                type="button"
-                className="btn-close btn-close-white btn-sm ms-2"
-                onClick={() => handleRemoveDate(date)}
-                aria-label="Eliminar"
-              />
-            </span>
-          ))}
-        </div>
-      </div>
-
-      <div className="mb-3">
-        <span className={`badge ${isAvailable() ? 'bg-success' : 'bg-secondary'}`}>
-          {isAvailable() ? 'Disponible' : 'No disponible'}
-        </span>
-      </div>
-
-      <div className="d-grid">
-        <button type="submit" className="btn btn-warning" disabled={isLoading}>
-          {isLoading ? 'Actualizando...' : 'Actualizar'}
-        </button>
-      </div>
-    </form>
+      </form>
+    </motion.div>
   );
 };
 
 UpdateRoom.propTypes = {
   onUpdated: PropTypes.func,
 };
-
 UpdateRoom.defaultProps = {
   onUpdated: null,
 };

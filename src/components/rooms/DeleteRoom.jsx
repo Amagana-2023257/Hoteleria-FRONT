@@ -1,54 +1,92 @@
 // src/components/rooms/crud/DeleteRoom.jsx
 import React, { useState } from 'react';
 import PropTypes from 'prop-types';
+import { motion } from 'framer-motion';
 import { useDeleteRoom } from '../../shared/hooks/useDeleteRoom';
 import { useGetRooms } from '../../shared/hooks/useGetRooms';
 
-export const DeleteRoom = ({ onDeleted }) => {
-  const { deleteRoom, isLoading } = useDeleteRoom();
-  const { rooms, isLoading: loadingRooms } = useGetRooms();
+const formatDate = iso => {
+  const d = new Date(iso);
+  return d.toLocaleDateString('es-GT');
+};
 
+export const DeleteRoom = ({ onDeleted }) => {
+  const { deleteRoom, isLoading: deleting } = useDeleteRoom();
+  const { rooms, isLoading: loadingRooms, error: fetchError } = useGetRooms();
   const [selectedRoomId, setSelectedRoomId] = useState('');
+
+  const handleChange = e => {
+    setSelectedRoomId(e.target.value);
+  };
 
   const handleSubmit = async e => {
     e.preventDefault();
     if (!selectedRoomId) return;
-
     const result = await deleteRoom(selectedRoomId);
-    if (result.success && onDeleted) {
-      onDeleted(selectedRoomId);
+    if (result.success) {
+      onDeleted?.(selectedRoomId);
       setSelectedRoomId('');
     }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="p-3 border rounded bg-white shadow">
-      <h5 className="mb-3">Eliminar Habitación</h5>
-
-      <div className="mb-3">
-        <label htmlFor="roomSelect" className="form-label">Seleccionar habitación</label>
-        <select
-          id="roomSelect"
-          className="form-select"
-          value={selectedRoomId}
-          onChange={e => setSelectedRoomId(e.target.value)}
-          disabled={loadingRooms || isLoading}
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+      className="container mt-4"
+    >
+      <form
+        onSubmit={handleSubmit}
+        className="card shadow-sm"
+      >
+        {/* Header */}
+        <div
+          className="px-4 py-2"
+          style={{
+            background: 'linear-gradient(45deg, #833AB4, #FD1D1D, #F56040)'
+          }}
         >
-          <option value="">-- Selecciona una habitación --</option>
-          {rooms.map(room => (
-            <option key={room._id} value={room._id}>
-              {room.type} - Capacidad: {room.capacity} - Q{room.price}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      <div className="d-grid mt-3">
-        <button type="submit" className="btn btn-danger" disabled={!selectedRoomId || isLoading}>
-          {isLoading ? 'Eliminando...' : 'Eliminar Habitación'}
-        </button>
-      </div>
-    </form>
+          <h5 className="text-white mb-0">Eliminar Habitación</h5>
+        </div>
+        <div className="card-body">
+          {fetchError && (
+            <div className="alert alert-danger">
+              Error cargando habitaciones. Intenta de nuevo.
+            </div>
+          )}
+          <div className="mb-3">
+            <label htmlFor="roomSelect" className="form-label">
+              Seleccionar habitación
+            </label>
+            <select
+              id="roomSelect"
+              className="form-select"
+              value={selectedRoomId}
+              onChange={handleChange}
+              disabled={loadingRooms || deleting}
+            >
+              <option value="">-- Elige una habitación --</option>
+              {rooms.map(r => (
+                <option key={r._id} value={r._id}>
+                  {r.hotel?.name} – {r.type} – {r.capacity} pax – Q{r.price.toFixed(2)} –
+                  {r.availability === 'available' ? ' Disponible' : ' No disponible'} desde {formatDate(r.availabilityDate)}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="d-grid">
+            <button
+              type="submit"
+              className="btn btn-danger"
+              disabled={!selectedRoomId || deleting}
+            >
+              {deleting ? 'Eliminando…' : 'Eliminar Habitación'}
+            </button>
+          </div>
+        </div>
+      </form>
+    </motion.div>
   );
 };
 

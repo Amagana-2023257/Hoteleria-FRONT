@@ -1,48 +1,92 @@
 // src/components/reservations/crud/ListReservations.jsx
 import React from 'react';
+import { motion } from 'framer-motion';
 import { useGetReservations } from '../../shared/hooks/useGetReservations';
+
+const formatDate = iso => {
+  const d = new Date(iso);
+  return d.toLocaleDateString('es-GT');
+};
 
 export const ListReservations = () => {
   const { reservations, isLoading, error, fetchReservations } = useGetReservations();
 
   return (
-    <div className="p-4 border rounded-lg bg-white shadow">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-lg font-semibold">Lista de Reservaciones</h2>
-        <button
-          className="px-3 py-1 border border-gray-400 text-sm rounded hover:bg-gray-100"
-          onClick={fetchReservations}
-          disabled={isLoading}
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4 }}
+      className="container mt-4"
+    >
+      <div className="card shadow-sm rounded overflow-hidden">
+        {/* Header Instagram-style */}
+        <div
+          className="px-4 py-3 d-flex justify-content-between align-items-center"
+          style={{
+            background: 'linear-gradient(45deg, #833AB4, #FD1D1D, #F56040)'
+          }}
         >
-          {isLoading ? 'Cargando...' : 'Recargar'}
-        </button>
-      </div>
-
-      {error && (
-        <div className="text-red-600 mb-3">
-          Error al cargar reservaciones: {error.message || 'Intenta de nuevo.'}
+          <h5 className="text-white mb-0">📋 Lista de Reservaciones</h5>
+          <button
+            className="btn btn-outline-light btn-sm"
+            onClick={fetchReservations}
+            disabled={isLoading}
+          >
+            {isLoading ? '⏳ Cargando…' : '🔄 Recargar'}
+          </button>
         </div>
-      )}
 
-      {!isLoading && reservations.length === 0 && (
-        <div className="text-gray-500">No hay reservaciones disponibles.</div>
-      )}
+        <div className="card-body bg-white">
+          {error && (
+            <div className="alert alert-danger">
+              Error al cargar reservaciones: {error.message || 'Intenta de nuevo.'}
+            </div>
+          )}
 
-      {reservations.length > 0 && (
-        <ul className="space-y-4">
-          {reservations.map(res => (
-            <li key={res._id} className="p-4 border rounded shadow-sm bg-gray-50">
-              <div><strong>ID:</strong> {res._id}</div>
-              <div><strong>Usuario:</strong> {res.user?.name} {res.user?.surname} ({res.user?.email})</div>
-              <div><strong>Hotel:</strong> {res.hotel?.name}</div>
-              <div><strong>Habitación:</strong> {res.room?.number}</div>
-              <div><strong>Entrada:</strong> {new Date(res.checkInDate).toLocaleDateString()}</div>
-              <div><strong>Salida:</strong> {new Date(res.checkOutDate).toLocaleDateString()}</div>
-              <div><strong>Estado:</strong> {res.status}</div>
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
+          {!isLoading && reservations.length === 0 && (
+            <div className="text-muted">No hay reservaciones disponibles.</div>
+          )}
+
+          {reservations.length > 0 && (
+            <div className="row row-cols-1 row-cols-md-2 g-3">
+              {reservations.map(r => (
+                <div key={r._id} className="col">
+                  <motion.div
+                    className="card h-100 border-0 shadow-sm"
+                    whileHover={{ scale: 1.03 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <div className="card-body">
+                      <h6 className="card-title mb-3 text-truncate">{r.user?.name} {r.user?.surname}</h6>
+                      <ul className="list-unstyled small mb-0">
+                        <li><strong>ID:</strong> {r._id}</li>
+                        <li><strong>Email:</strong> {r.user?.email}</li>
+                        <li><strong>Hotel:</strong> {r.hotel?.name}</li>
+                        <li><strong>Habitación:</strong> {r.room?.number}</li>
+                        <li><strong>Check-in:</strong> {formatDate(r.checkInDate)}</li>
+                        <li><strong>Check-out:</strong> {formatDate(r.checkOutDate)}</li>
+                        <li>
+                          <strong>Estado:</strong>{' '}
+                          <span className={`badge ${
+                            r.status === 'Booked' ? 'bg-primary' :
+                            r.status === 'CheckedIn' ? 'bg-success' :
+                            r.status === 'CheckedOut' ? 'bg-secondary' :
+                            'bg-danger'
+                          }`}>
+                            {r.status}
+                          </span>
+                        </li>
+                        <li><strong>Creada:</strong> {formatDate(r.createdAt)}</li>
+                        <li><strong>Actualizada:</strong> {formatDate(r.updatedAt)}</li>
+                      </ul>
+                    </div>
+                  </motion.div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </motion.div>
   );
 };
